@@ -3,6 +3,7 @@ import { Bot, Clock, Loader2, Play, Zap } from 'lucide-react';
 import { listAgents, runSchedulerTick, wakeAgent } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/lib/utils';
+import { strategyLabel } from '@/lib/i18n';
 
 export default function Agents() {
   const toast = useToast();
@@ -40,7 +41,7 @@ export default function Agents() {
         <div>
           <p className="mb-2 flex items-center gap-2 text-sm text-emerald-200">
             <Bot size={16} />
-            Rules-first Agent Runtime
+            AI 代理运行时
           </p>
           <h1 className="text-3xl font-bold text-white">AI 代理</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-400">
@@ -68,8 +69,8 @@ export default function Agents() {
           <div key={agent.accountId} className="fluid-glass-card p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <div className="mb-2 rounded-full bg-purple-400/10 px-2 py-1 text-xs text-purple-200">
-                  {agent.strategy}
+                <div className="mb-2 rounded-full bg-purple-400/10 px-2 py-1 text-sm text-purple-200">
+                  {strategyLabel(agent.strategy)}
                 </div>
                 <h2 className="text-xl font-semibold text-white">{agent.role}</h2>
                 <p className="mt-1 text-sm text-slate-400">{agent.focusCategories.join(' / ')}</p>
@@ -87,17 +88,17 @@ export default function Agents() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-500">单次上限</div>
+                <div className="text-sm text-slate-500">单次上限</div>
                 <div className="mt-1 text-lg font-semibold text-white">{agent.maxTradePoints} 点</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-500">今日预算</div>
+                <div className="text-sm text-slate-500">今日预算</div>
                 <div className="mt-1 text-lg font-semibold text-white">
                   {agent.actionsUsedToday}/{agent.dailyActionBudget}
                 </div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-slate-500">风险偏好</div>
+                <div className="text-sm text-slate-500">风险偏好</div>
                 <div className="mt-1 text-lg font-semibold text-white">{Math.round(agent.riskAppetite * 100)}%</div>
               </div>
             </div>

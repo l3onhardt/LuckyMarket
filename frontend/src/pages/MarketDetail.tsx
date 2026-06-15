@@ -6,6 +6,7 @@ import { useMarket, useMarketActivity, usePlaceTrade, useQuote } from '@/hooks/u
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate, formatPoints, formatProbability } from '@/lib/utils';
+import { categoryLabel } from '@/lib/i18n';
 
 export default function MarketDetail() {
   const { id } = useParams();
@@ -76,7 +77,7 @@ export default function MarketDetail() {
         <section className="space-y-5">
           <div className="fluid-glass-card p-6">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-blue-400/10 px-2 py-1 text-sm text-blue-200">{market.category}</span>
+              <span className="rounded-full bg-blue-400/10 px-2 py-1 text-sm text-blue-200">{categoryLabel(market.category)}</span>
               <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-sm text-emerald-200">
                 {market.status === 'open' ? '开放交易' : market.status === 'closed' ? '已关闭' : '已结算'}
               </span>

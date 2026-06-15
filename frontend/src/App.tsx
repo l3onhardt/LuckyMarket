@@ -29,7 +29,7 @@ function AppRoutes() {
 
   return (
     <BrowserRouter>
-      <div className="app-container">
+      <div className="min-h-screen">
         {adminQuery.isError && (
           <div className="border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-center text-sm text-red-200">
             后端暂时不可用，请确认 http://localhost:4000 已启动。
@@ -47,7 +47,7 @@ function AppRoutes() {
               <ProtectedRoute>
                 <>
                   <TopBar />
-                  <main className="main-content">
+                  <main>
                     <Home />
                   </main>
                   <BottomNav />
@@ -61,7 +61,7 @@ function AppRoutes() {
               <ProtectedRoute>
                 <>
                   <TopBar />
-                  <main className="main-content">
+                  <main>
                     <MarketDetail />
                   </main>
                   <BottomNav />
@@ -75,7 +75,7 @@ function AppRoutes() {
               <ProtectedRoute>
                 <>
                   <TopBar />
-                  <main className="main-content">
+                  <main>
                     <Portfolio />
                   </main>
                   <BottomNav />
@@ -89,7 +89,7 @@ function AppRoutes() {
               <ProtectedRoute>
                 <>
                   <TopBar />
-                  <main className="main-content">
+                  <main>
                     <Agents />
                   </main>
                   <BottomNav />
@@ -105,7 +105,7 @@ function AppRoutes() {
               <ProtectedRoute requireAdmin>
                 <>
                   <TopBar />
-                  <main className="main-content">
+                  <main>
                     <Admin />
                   </main>
                   <BottomNav />

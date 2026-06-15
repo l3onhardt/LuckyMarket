@@ -19,7 +19,7 @@ export default function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/85 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="flex h-16 items-center justify-around">
+        <div className="flex h-20 items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -30,11 +30,11 @@ export default function BottomNav() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex min-w-16 flex-col items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                className={`flex min-w-[80px] flex-col items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isActive ? 'text-emerald-300' : 'text-slate-400 hover:text-slate-100'
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-6 w-6" />
                 <span>{item.label}</span>
               </Link>
             );

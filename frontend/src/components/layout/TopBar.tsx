@@ -21,12 +21,12 @@ export default function TopBar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div>
           <h1 className="text-2xl font-bold tracking-normal text-white">LuckyMarket</h1>
-          <p className="text-xs text-slate-400">单管理员演示模式</p>
+          <p className="text-sm text-slate-400">单管理员演示模式</p>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className="text-xs text-slate-400">管理员余额</div>
+            <div className="text-sm text-slate-400">管理员余额</div>
             <div className="text-lg font-semibold text-emerald-300">{formatNumber(balance, 0)} 点</div>
           </div>
 

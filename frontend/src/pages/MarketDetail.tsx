@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Loader2, Send, TrendingUp } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMarket, useMarketActivity, usePlaceTrade, useQuote } from '@/hooks/useMarkets';
+import { useMarket, useMarketActivity, useMarketPriceHistory, usePlaceTrade, useQuote } from '@/hooks/useMarkets';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate, formatPoints, formatProbability } from '@/lib/utils';
 import { categoryLabel } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/Skeleton';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import PriceChart from '@/components/market/PriceChart';
 
 export default function MarketDetail() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function MarketDetail() {
   const toast = useToast();
   const marketQuery = useMarket(id);
   const activityQuery = useMarketActivity(id);
+  const historyQuery = useMarketPriceHistory(id);
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<string>('');
   const [shares, setShares] = useState(2);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -121,6 +123,11 @@ export default function MarketDetail() {
                 </button>
               );
             })}
+          </div>
+
+          <div className="fluid-glass-card p-6">
+            <h2 className="mb-4 text-xl font-semibold text-white">价格走势</h2>
+            <PriceChart snapshots={historyQuery.data ?? []} outcomes={market.outcomes} />
           </div>
 
           <div className="fluid-glass-card p-6">

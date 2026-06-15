@@ -76,11 +76,11 @@ export default function MarketDetail() {
         <section className="space-y-5">
           <div className="fluid-glass-card p-6">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-blue-400/10 px-2 py-1 text-xs text-blue-200">{market.category}</span>
-              <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-xs text-emerald-200">
+              <span className="rounded-full bg-blue-400/10 px-2 py-1 text-sm text-blue-200">{market.category}</span>
+              <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-sm text-emerald-200">
                 {market.status === 'open' ? '开放交易' : market.status === 'closed' ? '已关闭' : '已结算'}
               </span>
-              <span className="text-xs text-slate-400">截止 {formatDate(market.closeTime)}</span>
+              <span className="text-sm text-slate-400">截止 {formatDate(market.closeTime)}</span>
             </div>
             <h1 className="text-3xl font-bold leading-10 text-white">{market.title}</h1>
             <p className="mt-3 text-sm text-slate-400">结算来源：{market.settlementSource}</p>
@@ -103,8 +103,8 @@ export default function MarketDetail() {
                     <span className="text-sm text-slate-300">{outcome.label}</span>
                     {selected && <CheckCircle2 className="h-5 w-5 text-emerald-300" />}
                   </div>
-                  <div className="text-4xl font-bold text-white">{formatProbability(price)}</div>
-                  <div className="mt-2 text-xs text-slate-500">池数量 {outcome.poolQuantity.toFixed(2)}</div>
+                  <div className="text-5xl font-bold text-white">{formatProbability(price)}</div>
+                  <div className="mt-2 text-sm text-slate-500">池数量 {outcome.poolQuantity.toFixed(2)}</div>
                 </button>
               );
             })}
@@ -121,9 +121,9 @@ export default function MarketDetail() {
                   <div key={item.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-medium text-slate-200">{item.message}</span>
-                      <span className="text-xs text-slate-500">{formatDate(item.createdAt)}</span>
+                      <span className="text-sm text-slate-500">{formatDate(item.createdAt)}</span>
                     </div>
-                    <div className="mt-1 text-xs uppercase tracking-wide text-slate-500">{item.type}</div>
+                    <div className="mt-1 text-sm uppercase tracking-wide text-slate-500">{item.type}</div>
                   </div>
                 ))
               ) : (

@@ -20,10 +20,10 @@ function MarketCard({ market }: { market: Market }) {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-blue-400/10 px-2 py-1 text-xs font-medium text-blue-200">
+            <span className="rounded-full bg-blue-400/10 px-2 py-1 text-sm font-medium text-blue-200">
               {market.category}
             </span>
-            <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-200">
+            <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-sm font-medium text-emerald-200">
               {statusLabel(market.status)}
             </span>
           </div>
@@ -44,7 +44,7 @@ function MarketCard({ market }: { market: Market }) {
               }`}
             >
               <div className="text-sm text-slate-300">{outcome.label}</div>
-              <div className="mt-1 text-2xl font-bold text-white">{formatProbability(price)}</div>
+              <div className="mt-1 text-3xl font-bold text-white">{formatProbability(price)}</div>
             </div>
           );
         })}

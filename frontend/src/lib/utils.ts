@@ -25,6 +25,14 @@ export function formatPercent(value: number, decimals = 1): string {
   return `${(value * 100).toFixed(decimals)}%`;
 }
 
+export function formatProbability(price: number, decimals = 0): string {
+  return `${price.toFixed(decimals)}%`;
+}
+
+export function formatPoints(value: number): string {
+  return `${formatNumber(value, 0)} 点`;
+}
+
 /**
  * 格式化相对日期（中文）
  */

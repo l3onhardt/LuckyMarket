@@ -6,22 +6,19 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
 }
 
-export default function ProtectedRoute({
-  children,
-  requireAdmin = false
-}: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
   const { user, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (requireAdmin && user?.role !== 'admin') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-red-500 mb-4">403</h1>
-          <p className="text-gray-600">无权访问此页面</p>
+      <div className="flex min-h-screen items-center justify-center text-center">
+        <div>
+          <h1 className="mb-4 text-4xl font-bold text-red-400">403</h1>
+          <p className="text-gray-300">当前账号没有管理员权限</p>
         </div>
       </div>
     );

@@ -1,4 +1,5 @@
 import { loadConfig } from './config.js';
+import { seedDemoData } from './db/seed.js';
 import type { Db } from './db/connection.js';
 import { openDatabase } from './db/connection.js';
 import { buildServer } from './http/server.js';
@@ -29,6 +30,7 @@ function startBackgroundScheduler(db: Db, maxAgentsPerTick: number): NodeJS.Time
 async function main(): Promise<void> {
   const config = loadConfig();
   const db = openDatabase(config.databaseUrl);
+  seedDemoData(db);
   const schedulerInterval = config.schedulerEnabled
     ? startBackgroundScheduler(db, config.maxAgentsPerTick)
     : undefined;

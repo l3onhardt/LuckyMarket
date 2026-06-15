@@ -1,110 +1,132 @@
-// 账户类型
-export type AccountKind = 'user' | 'market' | 'operator' | 'house';
+export type AccountKind = 'human' | 'agent' | 'system';
+export type AccountStatus = 'active' | 'disabled';
+export type AccountRole = 'admin' | 'user';
+export type MarketStatus = 'open' | 'closed' | 'settled';
+export type TradeSide = 'buy' | 'sell';
 
-// 账户状态
-export type AccountStatus = 'active' | 'frozen';
-
-// 市场状态
-export type MarketStatus = 'open' | 'closed' | 'resolved';
-
-// 账户接口
 export interface Account {
   id: string;
   kind: AccountKind;
+  handle: string;
+  displayName: string;
   status: AccountStatus;
-  balance: number;
-  displayName?: string; // For UI display
-  role?: 'admin' | 'user'; // For access control
+  role: AccountRole;
   createdAt: string;
-  updatedAt: string;
+  lastActiveAt: string | null;
 }
 
-// 市场结果接口
 export interface MarketOutcome {
   id: string;
   marketId: string;
-  title: string;
-  quantity: number;
-  createdAt: string;
-  updatedAt: string;
+  label: string;
+  sortOrder: number;
+  poolQuantity: number;
 }
 
-// 市场接口
+export interface MarketPrice {
+  outcomeId: string;
+  price: number;
+}
+
 export interface Market {
   id: string;
   title: string;
-  description: string;
+  category: string;
   status: MarketStatus;
-  operatorAccountId: string;
-  liquidity: number;
-  volume: number;
-  resolutionDate?: string;
-  resolvedOutcomeId?: string;
+  closeTime: string;
+  settlementSource: string;
+  winningOutcomeId: string | null;
+  liquidityParameter: number;
   createdAt: string;
-  updatedAt: string;
   outcomes: MarketOutcome[];
+  prices: MarketPrice[];
 }
 
-// 持仓接口
 export interface Position {
-  id: string;
   accountId: string;
+  marketId: string;
   outcomeId: string;
-  quantity: number;
-  createdAt: string;
+  shares: number;
   updatedAt: string;
-  outcome?: MarketOutcome;
 }
 
-// 账本条目接口
 export interface LedgerEntry {
   id: string;
   accountId: string;
+  type: string;
   amount: number;
-  balanceAfter: number;
-  description: string;
+  referenceType: string | null;
+  referenceId: string | null;
+  memo: string | null;
   createdAt: string;
 }
 
-// 代理人接口
 export interface Agent {
-  id: string;
   accountId: string;
-  name: string;
-  strategy: string;
-  config: Record<string, unknown>;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  role: string;
+  strategy: 'data_value' | 'trend' | 'contrarian' | 'market_maker';
+  focusCategories: string[];
+  riskAppetite: number;
+  maxTradePoints: number;
+  maxPositionShares: number;
+  wakeIntervalMinutes: number;
+  dailyActionBudget: number;
+  actionsUsedToday: number;
+  nextWakeAt: string;
+  lastWakeAt: string | null;
 }
 
-// 交易报价接口
 export interface TradeQuote {
+  marketId: string;
   outcomeId: string;
-  isBuy: boolean;
-  quantity: number;
-  price: number;
-  cost: number;
-  fee: number;
-  totalCost: number;
-  priceImpact: number;
+  side: TradeSide;
+  shares: number;
+  pointsAmount: number;
+  priceBefore: number;
+  priceAfter: number;
+  pricesBefore: MarketPrice[];
+  pricesAfter: MarketPrice[];
 }
 
-// 活动接口
+export interface TradeRecord {
+  id: string;
+  marketId: string;
+  outcomeId: string;
+  accountId: string;
+  side: TradeSide;
+  shares: number;
+  pointsAmount: number;
+  priceBefore: number;
+  priceAfter: number;
+  createdAt: string;
+}
+
 export interface Activity {
   id: string;
-  type: 'trade' | 'deposit' | 'withdraw' | 'market_created' | 'market_resolved';
-  accountId: string;
-  marketId?: string;
-  outcomeId?: string;
-  amount?: number;
-  price?: number;
-  quantity?: number;
-  description: string;
+  marketId: string | null;
+  accountId: string | null;
+  type: string;
+  message: string;
+  payload: unknown;
   createdAt: string;
 }
 
-// 认证响应接口
+export interface SchedulerTickResult {
+  now: string;
+  wokenAgents: string[];
+  skippedDueAgents: number;
+}
+
+export interface WakeAgentResult {
+  status: 'acted' | 'signaled' | 'skipped';
+  actionType: string;
+  wakeRunId: string;
+  marketId: string | null;
+  reason?: string;
+  trade?: TradeRecord;
+  signal?: string;
+}
+
 export interface AuthResponse {
   token: string;
   account: Account;

@@ -1,5 +1,16 @@
 import { apiClient } from './api';
-import type { Account, Market, Position, LedgerEntry, TradeQuote, Activity } from '@/types';
+import type {
+  Account,
+  Activity,
+  Agent,
+  LedgerEntry,
+  Market,
+  Position,
+  SchedulerTickResult,
+  TradeQuote,
+  TradeRecord,
+  WakeAgentResult,
+} from '@/types';
 
 // ==================== Account APIs ====================
 
@@ -12,22 +23,22 @@ export interface CreateAccountParams {
 
 export async function createAccount(params: CreateAccountParams): Promise<Account> {
   const response = await apiClient.post<{ account: Account }>('/accounts', params);
-  return response.data.account;
+  return withRole(response.data.account);
 }
 
 export async function listAccounts(): Promise<Account[]> {
   const response = await apiClient.get<{ accounts: Account[] }>('/accounts');
-  return response.data.accounts;
+  return response.data.accounts.map(withRole);
 }
 
 export async function getAccount(id: string): Promise<Account> {
   const response = await apiClient.get<{ account: Account }>(`/accounts/${id}`);
-  return response.data.account;
+  return withRole(response.data.account);
 }
 
 export async function getAccountByHandle(handle: string): Promise<Account> {
   const response = await apiClient.get<{ account: Account }>(`/accounts/handle/${handle}`);
-  return response.data.account;
+  return withRole(response.data.account);
 }
 
 export async function getAccountLedger(accountId: string): Promise<LedgerEntry[]> {
@@ -88,8 +99,8 @@ export interface PlaceTradeParams extends QuoteTradeParams {
   accountId: string;
 }
 
-export async function placeTrade(marketId: string, params: PlaceTradeParams): Promise<unknown> {
-  const response = await apiClient.post(`/markets/${marketId}/trades`, params);
+export async function placeTrade(marketId: string, params: PlaceTradeParams): Promise<TradeRecord> {
+  const response = await apiClient.post<{ trade: TradeRecord }>(`/markets/${marketId}/trades`, params);
   return response.data.trade;
 }
 
@@ -112,4 +123,28 @@ export async function settleMarket(marketId: string, winningOutcomeId: string): 
 export async function seedDemoData(): Promise<unknown> {
   const response = await apiClient.post('/seed/demo');
   return response.data.result;
+}
+
+// ==================== Agent APIs ====================
+
+export async function listAgents(): Promise<Agent[]> {
+  const response = await apiClient.get<{ agents: Agent[] }>('/agents');
+  return response.data.agents;
+}
+
+export async function wakeAgent(accountId: string): Promise<WakeAgentResult> {
+  const response = await apiClient.post<{ result: WakeAgentResult }>(`/agents/${accountId}/wake`);
+  return response.data.result;
+}
+
+export async function runSchedulerTick(): Promise<SchedulerTickResult> {
+  const response = await apiClient.post<{ result: SchedulerTickResult }>('/scheduler/tick');
+  return response.data.result;
+}
+
+function withRole(account: Account): Account {
+  return {
+    ...account,
+    role: account.handle === 'admin' ? 'admin' : account.role ?? 'user',
+  };
 }

@@ -16,6 +16,19 @@ npm run dev
 
 - URL: `http://localhost:4000`
 - DB: `data/luckymarket.sqlite`
+- Demo seed data is created automatically when the backend starts.
+
+## Frontend
+
+The frontend runs in single-admin mode for the current demo phase. It defaults to the seeded `admin` account and intentionally does not implement multi-user auth yet.
+
+```sh
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend URL: `http://localhost:3000`
 
 ## Environment
 

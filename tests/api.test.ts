@@ -22,6 +22,26 @@ describe('HTTP API', () => {
     }
   });
 
+  test('seed demo endpoint makes the default admin account available', async () => {
+    const db = createTestDb();
+    const server = await buildServer({ db, schedulerEnabled: false, maxAgentsPerTick: 2 });
+
+    try {
+      const seedResponse = await server.inject({ method: 'POST', url: '/seed/demo' });
+      expect(seedResponse.statusCode).toBe(200);
+
+      const adminResponse = await server.inject({ method: 'GET', url: '/accounts/handle/admin' });
+      expect(adminResponse.statusCode).toBe(200);
+      expect(adminResponse.json<{ account: { handle: string; kind: string } }>().account).toMatchObject({
+        handle: 'admin',
+        kind: 'human'
+      });
+    } finally {
+      await server.close();
+      db.close();
+    }
+  });
+
   test('quotes and places a trade through API', async () => {
     const db = createTestDb();
     await seedDemoDataForTest(db);

@@ -20,16 +20,4 @@ export default defineConfig({
       },
     },
   },
-  // @ts-ignore - test config for vitest
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
-    css: true,
-    environmentOptions: {
-      jsdom: {
-        resources: 'usable',
-      },
-    },
-  },
 });

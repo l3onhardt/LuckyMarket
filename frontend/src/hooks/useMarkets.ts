@@ -1,75 +1,54 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Market, Activity, TradeQuote } from '@/types';
-import * as marketsApi from '@/lib/api/markets';
-import { calculatePrices } from '@/lib/utils';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getMarket,
+  getMarketActivity,
+  listMarkets,
+  placeTrade,
+  quoteTrade,
+  type PlaceTradeParams,
+  type QuoteTradeParams,
+} from '@/lib/api-client';
 
-/**
- * 获取所有市场（每 10 秒自动刷新）
- */
 export function useMarkets() {
   return useQuery({
     queryKey: ['markets'],
-    queryFn: marketsApi.getMarkets,
-    refetchInterval: 10000, // 每 10 秒刷新
-    select: (markets) => {
-      // 为每个市场计算价格
-      return markets.map((market) => ({
-        ...market,
-        prices: calculatePrices(market.outcomes.map((o) => o.quantity)),
-      }));
-    },
+    queryFn: listMarkets,
+    refetchInterval: 10000,
   });
 }
 
-/**
- * 获取单个市场详情
- */
-export function useMarket(id: string) {
+export function useMarket(id: string | undefined) {
   return useQuery({
     queryKey: ['market', id],
-    queryFn: () => marketsApi.getMarket(id),
-    enabled: !!id,
-    select: (market) => ({
-      ...market,
-      prices: calculatePrices(market.outcomes.map((o) => o.quantity)),
-    }),
+    queryFn: () => getMarket(id as string),
+    enabled: Boolean(id),
   });
 }
 
-/**
- * 获取市场活动（每 5 秒自动刷新）
- */
-export function useMarketActivity(id: string) {
+export function useMarketActivity(id: string | undefined) {
   return useQuery({
     queryKey: ['market', id, 'activity'],
-    queryFn: () => marketsApi.getMarketActivity(id),
-    enabled: !!id,
-    refetchInterval: 5000, // 每 5 秒刷新
+    queryFn: () => getMarketActivity(id as string),
+    enabled: Boolean(id),
+    refetchInterval: 5000,
   });
 }
 
-/**
- * 获取交易报价
- */
-export function useQuote() {
+export function useQuote(marketId: string | undefined) {
   return useMutation({
-    mutationFn: (params: marketsApi.GetQuoteParams) => marketsApi.getQuote(params),
+    mutationFn: (params: QuoteTradeParams) => quoteTrade(marketId as string, params),
   });
 }
 
-/**
- * 执行交易
- */
-export function usePlaceTrade() {
+export function usePlaceTrade(marketId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: marketsApi.PlaceTradeParams) => marketsApi.placeTrade(params),
-    onSuccess: (_, variables) => {
-      // 交易成功后，使相关查询失效以触发重新获取
+    mutationFn: (params: PlaceTradeParams) => placeTrade(marketId as string, params),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['markets'] });
-      queryClient.invalidateQueries({ queryKey: ['market', variables.marketId] });
-      queryClient.invalidateQueries({ queryKey: ['market', variables.marketId, 'activity'] });
+      queryClient.invalidateQueries({ queryKey: ['market', marketId] });
+      queryClient.invalidateQueries({ queryKey: ['market', marketId, 'activity'] });
     },
   });
 }

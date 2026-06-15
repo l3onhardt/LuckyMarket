@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate, formatPoints, formatProbability } from '@/lib/utils';
 import { categoryLabel } from '@/lib/i18n';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function MarketDetail() {
   const { id } = useParams();
@@ -54,7 +55,16 @@ export default function MarketDetail() {
   };
 
   if (marketQuery.isLoading) {
-    return <div className="mx-auto max-w-5xl px-4 py-8 text-slate-300">正在加载市场...</div>;
+    return (
+      <div className="mx-auto max-w-7xl space-y-5 px-4 pb-24 pt-6 sm:px-6 lg:px-8">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-40 w-full" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      </div>
+    );
   }
 
   if (!market) {

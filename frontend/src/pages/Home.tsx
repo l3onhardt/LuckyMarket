@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/useToast';
 import { formatDate, formatProbability } from '@/lib/utils';
 import type { Market } from '@/types';
 import { categoryLabel } from '@/lib/i18n';
+import { MarketCardSkeleton } from '@/components/ui/Skeleton';
 
 function statusLabel(status: Market['status']) {
   if (status === 'open') return '开放交易';
@@ -92,7 +93,14 @@ export default function Home() {
         </button>
       </div>
 
-      {marketsQuery.isLoading && <div className="fluid-glass-card p-6 text-slate-300">正在加载市场...</div>}
+      {marketsQuery.isLoading && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <MarketCardSkeleton />
+          <MarketCardSkeleton />
+          <MarketCardSkeleton />
+          <MarketCardSkeleton />
+        </div>
+      )}
       {marketsQuery.isError && (
         <div className="fluid-glass-card border-red-400/30 p-6 text-red-200">
           无法连接后端，请先启动 http://localhost:4000。

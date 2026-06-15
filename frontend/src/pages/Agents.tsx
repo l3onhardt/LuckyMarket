@@ -4,6 +4,7 @@ import { listAgents, runSchedulerTick, wakeAgent } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/lib/utils';
 import { strategyLabel } from '@/lib/i18n';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function Agents() {
   const toast = useToast();
@@ -59,7 +60,12 @@ export default function Agents() {
         </button>
       </div>
 
-      {agentsQuery.isLoading && <div className="fluid-glass-card p-6 text-slate-300">正在加载代理...</div>}
+      {agentsQuery.isLoading && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Skeleton className="h-44" />
+          <Skeleton className="h-44" />
+        </div>
+      )}
       {agentsQuery.isError && (
         <div className="fluid-glass-card border-red-400/30 p-6 text-red-200">无法读取 agents，请确认后端已启动。</div>
       )}

@@ -76,6 +76,12 @@ export interface ActivityRecord {
   createdAt: string;
 }
 
+export interface PriceSnapshotRecord {
+  outcomeId: string;
+  price: number;
+  createdAt: string;
+}
+
 interface MarketRow {
   id: string;
   title: string;
@@ -129,6 +135,14 @@ interface ActivityRow {
   type: string;
   message: string;
   payload_json: string;
+  created_at: string;
+}
+
+interface PriceSnapshotRow {
+  id: string;
+  market_id: string;
+  outcome_id: string;
+  price: number;
   created_at: string;
 }
 
@@ -193,6 +207,14 @@ function mapActivity(row: ActivityRow): ActivityRecord {
     type: row.type,
     message: row.message,
     payload: JSON.parse(row.payload_json) as unknown,
+    createdAt: row.created_at
+  };
+}
+
+function mapSnapshot(row: PriceSnapshotRow): PriceSnapshotRecord {
+  return {
+    outcomeId: row.outcome_id,
+    price: row.price,
     createdAt: row.created_at
   };
 }
@@ -462,6 +484,15 @@ export class MarketService {
       .all(marketId) as ActivityRow[];
 
     return rows.map(mapActivity);
+  }
+
+  getPriceHistory(marketId: string): PriceSnapshotRecord[] {
+    this.getMarketRow(marketId); // 不存在则抛 notFound
+    const rows = this.db
+      .prepare('SELECT * FROM market_price_snapshots WHERE market_id = ? ORDER BY created_at ASC, id ASC')
+      .all(marketId) as PriceSnapshotRow[];
+
+    return rows.map(mapSnapshot);
   }
 
   private getMarketRow(marketId: string): Market {

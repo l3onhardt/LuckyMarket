@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, ChevronRight, Clock, Database } from 'lucide-react';
 import { useMarkets } from '@/hooks/useMarkets';
@@ -7,6 +8,7 @@ import { formatDate, formatProbability } from '@/lib/utils';
 import type { Market } from '@/types';
 import { categoryLabel } from '@/lib/i18n';
 import { MarketCardSkeleton } from '@/components/ui/Skeleton';
+import CategoryTabs from '@/components/market/CategoryTabs';
 
 function statusLabel(status: Market['status']) {
   if (status === 'open') return '开放交易';
@@ -63,6 +65,11 @@ function MarketCard({ market }: { market: Market }) {
 export default function Home() {
   const marketsQuery = useMarkets();
   const toast = useToast();
+  const [activeCategory, setActiveCategory] = useState('all');
+  const categories = [...new Set((marketsQuery.data ?? []).map((m) => m.category))];
+  const visibleMarkets = (marketsQuery.data ?? []).filter(
+    (m) => activeCategory === 'all' || m.category === activeCategory,
+  );
 
   const handleSeed = async () => {
     await seedDemoData();
@@ -93,6 +100,10 @@ export default function Home() {
         </button>
       </div>
 
+      {categories.length > 0 && (
+        <CategoryTabs categories={categories} active={activeCategory} onChange={setActiveCategory} />
+      )}
+
       {marketsQuery.isLoading && (
         <div className="grid gap-4 lg:grid-cols-2">
           <MarketCardSkeleton />
@@ -110,7 +121,7 @@ export default function Home() {
         <div className="fluid-glass-card p-6 text-slate-300">暂无市场，点击“准备演示数据”。</div>
       )}
       <div className="grid gap-4 lg:grid-cols-2">
-        {marketsQuery.data?.map((market) => (
+        {visibleMarkets.map((market) => (
           <MarketCard key={market.id} market={market} />
         ))}
       </div>

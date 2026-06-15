@@ -13,6 +13,8 @@ export interface Account {
   kind: AccountKind;
   status: AccountStatus;
   balance: number;
+  displayName?: string; // For UI display
+  role?: 'admin' | 'user'; // For access control
   createdAt: string;
   updatedAt: string;
 }

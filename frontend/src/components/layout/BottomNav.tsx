@@ -1,13 +1,13 @@
 import { Home, TrendingUp, Bot, Settings } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/store/authStore';
 import { useLocation, Link } from 'react-router-dom';
 
-export function BottomNav() {
+export default function BottomNav() {
   const user = useAuthStore((state) => state.user);
   const location = useLocation();
 
   const navItems = [
-    { path: '/dashboard', icon: Home, label: '首页' },
+    { path: '/', icon: Home, label: '首页' },
     { path: '/portfolio', icon: TrendingUp, label: '投资组合' },
     { path: '/agents', icon: Bot, label: 'AI代理' },
   ];

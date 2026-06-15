@@ -20,6 +20,7 @@ export default defineConfig({
       },
     },
   },
+  // @ts-ignore - test config for vitest
   test: {
     globals: true,
     environment: 'jsdom',

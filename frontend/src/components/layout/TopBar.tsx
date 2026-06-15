@@ -1,6 +1,6 @@
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/store/authStore';
 
-export function TopBar() {
+export default function TopBar() {
   const user = useAuthStore((state) => state.user);
 
   return (
@@ -25,7 +25,7 @@ export function TopBar() {
             {/* User Avatar */}
             {user && (
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lucky-gold to-lucky-red flex items-center justify-center text-white font-semibold">
-                {user.displayName.charAt(0).toUpperCase()}
+                {(user.displayName || 'U').charAt(0).toUpperCase()}
               </div>
             )}
           </div>

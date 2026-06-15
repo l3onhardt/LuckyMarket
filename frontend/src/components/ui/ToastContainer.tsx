@@ -1,7 +1,8 @@
+import { useToastStore_ } from '@/hooks/useToast';
 import { X } from 'lucide-react';
-import { useToastStore_, type Toast as ToastType } from '../../hooks/useToast';
+import type { Toast } from '@/hooks/useToast';
 
-const ToastItem = ({ toast, onClose }: { toast: ToastType; onClose: () => void }) => {
+const ToastItem = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
   const typeColors = {
     success: 'border-emerald-500/30 bg-emerald-500/10',
     error: 'border-red-500/30 bg-red-500/10',
@@ -32,11 +33,11 @@ const ToastItem = ({ toast, onClose }: { toast: ToastType; onClose: () => void }
   );
 };
 
-export const ToastContainer = () => {
+export default function ToastContainer() {
   const { toasts, removeToast } = useToastStore_();
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2">
       {toasts.map((toast) => (
         <ToastItem
           key={toast.id}
@@ -46,4 +47,4 @@ export const ToastContainer = () => {
       ))}
     </div>
   );
-};
+}

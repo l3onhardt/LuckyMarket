@@ -124,7 +124,7 @@ cd /d/github/LuckyMarket/frontend && npm run dev
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /d/github/LuckyMarket && git add frontend/src/index.css && git rm frontend/tailwind.config.js && git commit -m "fix(frontend): complete Tailwind v4 migration in CSS entry
+cd /d/github/LuckyMarket && git add -A frontend/src/index.css frontend/tailwind.config.js && git commit -m "fix(frontend): complete Tailwind v4 migration in CSS entry
 
 Replace removed v3 @tailwind directives with @import \"tailwindcss\" + @theme.
 This restores ~90% of utility classes that previously never compiled
@@ -616,10 +616,15 @@ cd /d/github/LuckyMarket && git add frontend/src/components/ui/ConfirmDialog.tsx
 
 `frontend/src/lib/motion.ts`:
 ```ts
+import { cubicBezier } from 'framer-motion';
+
+// 液体感缓动（spec §交互设计）；用 helper 避免 TS 元组类型摩擦
+const liquid = cubicBezier(0.4, 0, 0.2, 1);
+
 export const pageFade = {
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const },
+  transition: { duration: 0.3, ease: liquid },
 };
 
 export const staggerContainer = {
@@ -628,7 +633,7 @@ export const staggerContainer = {
 
 export const listItem = {
   initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const } },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: liquid } },
 };
 ```
 > Framer Motion 默认会在用户系统开启"减少动态"时弱化动画（配合 `MotionConfig reducedMotion="user"`，见下一步）。
@@ -681,7 +686,7 @@ Expected: grep 无结果；构建通过。
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /d/github/LuckyMarket && git rm frontend/src/App.css && git add frontend/src/App.tsx && git commit -m "chore(frontend): remove dead App.css and undefined layout classes"
+cd /d/github/LuckyMarket && git add -A frontend/src/App.css frontend/src/App.tsx && git commit -m "chore(frontend): remove dead App.css and undefined layout classes"
 ```
 
 ---
@@ -701,7 +706,6 @@ cd /d/github/LuckyMarket && git rm frontend/src/App.css && git add frontend/src/
 import { describe, expect, test } from 'vitest';
 import { LedgerService } from '../src/services/ledger.js';
 import { MarketService } from '../src/services/markets.js';
-import { notFound } from '../src/domain/errors.js';
 import { createTestDb } from './helpers.js';
 
 function tomorrow(): string {

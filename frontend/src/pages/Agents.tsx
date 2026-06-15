@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bot, Clock, Loader2, Play, Zap } from 'lucide-react';
-import { listAgents, runSchedulerTick, wakeAgent } from '@/lib/api-client';
+import { listAccounts, listAgents, runSchedulerTick, wakeAgent } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/lib/utils';
 import { strategyLabel } from '@/lib/i18n';
@@ -13,6 +13,10 @@ export default function Agents() {
     queryKey: ['agents'],
     queryFn: listAgents,
     refetchInterval: 10000,
+  });
+  const accountsQuery = useQuery({
+    queryKey: ['accounts'],
+    queryFn: listAccounts,
   });
   const wakeMutation = useMutation({
     mutationFn: wakeAgent,
@@ -58,6 +62,23 @@ export default function Agents() {
           {schedulerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap size={16} />}
           运行调度 tick
         </button>
+      </div>
+
+      <div className="mb-5 grid gap-4 sm:grid-cols-2">
+        <div className="fluid-glass-card p-5">
+          <div className="text-sm text-slate-400">人类参与者</div>
+          <div className="mt-2 text-4xl font-bold text-white">
+            {accountsQuery.data?.filter((a) => a.kind === 'human').length ?? 0}
+          </div>
+          <div className="mt-1 text-sm text-slate-400">个账户</div>
+        </div>
+        <div className="fluid-glass-card p-5">
+          <div className="text-sm text-slate-400">AI 代理</div>
+          <div className="mt-2 text-4xl font-bold text-emerald-300">{agentsQuery.data?.length ?? 0}</div>
+          <div className="mt-1 text-sm text-slate-400">
+            今日累计行动 {agentsQuery.data?.reduce((sum, agent) => sum + agent.actionsUsedToday, 0) ?? 0} 次
+          </div>
+        </div>
       </div>
 
       {agentsQuery.isLoading && (

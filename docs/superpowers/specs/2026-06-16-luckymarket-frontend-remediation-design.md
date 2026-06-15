@@ -136,6 +136,7 @@
   - `Home`/`Portfolio`/`Agents`/`Admin` 的英文 eyebrow 文案改中文（Admin Portfolio→我的组合、Single Admin Mode→单管理员模式、Rules-first Agent Runtime→AI 代理运行时 等）
   - 策略枚举映射中文：`data_value`→数据价值、`trend`→趋势、`contrarian`→反向、`market_maker`→做市
   - `Admin.tsx:135` 的 `market.status` 原样英文 → 开放/已关闭/已结算（复用现有状态映射）
+  - `category` 为用户自建自由文本（seed 可能为英文如 `product`）：按原值展示，仅对已知英文分类做显示映射，不强行翻译、不造词
 - **Framer Motion 动效**（已装）：卡片 hover（`translateY(-4px) scale(1.01)`，spec 缓动曲线）、列表入场 stagger、页面淡入（0.3s）、弹窗 spring；统一封装并遵守 `prefers-reduced-motion`。
 - **死代码清理**：删除 `frontend/src/App.css`；`App.tsx` 的 `.app-container`/`.main-content` 改为 Tailwind 工具类（或在 index.css 最小定义），消除未定义类。
 
@@ -161,7 +162,9 @@
 ## 5. 如实声明（避免过度承诺）
 
 1. **recharts 为新增依赖**（P3 必需）。已获用户同意可加新依赖，仍在此明示。
-2. **人类 vs AI 对比**（原始 spec §4）：所需"胜率/收益"指标依赖结算历史与持仓推算，当前后端数据**不一定可导出**。本轮**不编造数据**——能从现有接口算出的真实指标（参与度/活跃度/行动数等）才展示，算不出的指标标注或省略。该模块在本轮按"尽力而为、真实优先"处理，必要时降级为代理概览。
+2. **人类 vs AI 对比**（原始 spec §4）：所需"胜率/收益"指标依赖结算历史与持仓推算，当前后端数据**不一定可导出**。本轮**不编造数据**——能从现有接口算出的真实指标才展示，算不出的指标省略。
+   - **最小可交付（界定清楚，避免实现猜测）**：仅用现有只读接口 `GET /agents` + `GET /accounts` 可得字段做对比——AI 代理数量、累计/今日行动数（`actionsUsedToday`/`dailyActionBudget`）、活跃度（`lastWakeAt`/`nextWakeAt`）；人类侧展示账户数量与参与情况。
+   - **胜率 / 收益率**：若无法从现有只读接口推导（需结算历史 + 逐账户盈亏），**本轮直接不展示这两项**，不为它们新增任何后端。绝不显示占位假值。
 3. 价格历史依赖交易产生的快照；**新建或零成交市场无历史**，前端须优雅降级，不得显示空白或报错图表。
 
 ---

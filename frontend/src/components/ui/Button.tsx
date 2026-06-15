@@ -17,16 +17,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizeClasses = {
-      sm: 'button-sm px-3 py-1.5 text-sm',
-      md: 'button-md px-4 py-2 text-base',
-      lg: 'button-lg px-6 py-3 text-lg',
+      sm: 'button-sm min-h-[40px] px-4 text-sm',
+      md: 'button-md min-h-[48px] px-5 text-base',
+      lg: 'button-lg min-h-[52px] px-6 text-lg',
     };
 
     return (
       <button
         ref={ref}
         className={clsx(
-          'rounded-xl font-medium transition-all duration-200',
+          'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           variantClasses[variant],
           sizeClasses[size],

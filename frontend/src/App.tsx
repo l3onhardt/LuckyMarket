@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MotionConfig } from 'framer-motion';
 import TopBar from './components/layout/TopBar';
 import BottomNav from './components/layout/BottomNav';
 import ProtectedRoute from './components/layout/ProtectedRoute';
@@ -126,7 +127,9 @@ function AppRoutes() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppRoutes />
+      <MotionConfig reducedMotion="user">
+        <AppRoutes />
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

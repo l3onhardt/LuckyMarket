@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Activity, ChevronRight, Clock, Database } from 'lucide-react';
 import { useMarkets } from '@/hooks/useMarkets';
@@ -9,6 +10,7 @@ import type { Market } from '@/types';
 import { categoryLabel } from '@/lib/i18n';
 import { MarketCardSkeleton } from '@/components/ui/Skeleton';
 import CategoryTabs from '@/components/market/CategoryTabs';
+import { staggerContainer, listItem } from '@/lib/motion';
 
 function statusLabel(status: Market['status']) {
   if (status === 'open') return '开放交易';
@@ -120,11 +122,18 @@ export default function Home() {
       {marketsQuery.data && marketsQuery.data.length === 0 && (
         <div className="fluid-glass-card p-6 text-slate-300">暂无市场，点击“准备演示数据”。</div>
       )}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <motion.div
+        className="grid gap-4 lg:grid-cols-2"
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
         {visibleMarkets.map((market) => (
-          <MarketCard key={market.id} market={market} />
+          <motion.div key={market.id} variants={listItem}>
+            <MarketCard market={market} />
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }

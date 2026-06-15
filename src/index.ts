@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   });
 
   const address = await server.listen({ port: config.port, host: '0.0.0.0' });
-  console.log(`luckymarket-backend listening at ${address}`);
+  console.log(`luckymarket listening at ${address}`);
 
   const shutdown = async (): Promise<void> => {
     if (schedulerInterval) {

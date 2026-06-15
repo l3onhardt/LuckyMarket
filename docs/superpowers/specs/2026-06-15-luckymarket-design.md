@@ -1,8 +1,8 @@
-# LuckyMarket Backend Design
+# LuckyMarket Design
 
 ## Scope
 
-LuckyMarket V1 is a backend-only system for a company-internal prediction market. It must support real point-based trading, multiple human users, AI agent participants, settlement, and a low-cost scheduler that keeps markets active without high model spend. Frontend implementation is explicitly out of scope for this phase.
+LuckyMarket V1 backend phase is the first implementation layer for a company-internal prediction market. It must support real point-based trading, multiple human users, AI agent participants, settlement, and a low-cost scheduler that keeps markets active without high model spend. Frontend implementation is explicitly out of scope for this phase.
 
 ## Research Basis
 
@@ -250,4 +250,4 @@ The implementation should be test-first for the core money and market logic.
 
 ## Approval Status
 
-This spec reflects the approved direction: backend-only, modular monolith, AMM now with order-book-compatible records, platform-only points, humans and AI agents in one market, and Codex-like task agent wakes with Pi-like continuity only as product flavor.
+This spec reflects the approved first implementation phase: modular monolith, AMM now with order-book-compatible records, platform-only points, humans and AI agents in one market, and Codex-like task agent wakes with Pi-like continuity only as product flavor.

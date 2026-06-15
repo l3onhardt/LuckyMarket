@@ -63,7 +63,7 @@ function makeServices(options: RegisterRoutesOptions) {
 export async function registerRoutes(server: FastifyInstance, options: RegisterRoutesOptions): Promise<void> {
   const { ledger, markets, agents, scheduler } = makeServices(options);
 
-  server.get('/health', async () => ({ ok: true, service: 'luckymarket-backend' }));
+  server.get('/health', async () => ({ ok: true, service: 'luckymarket' }));
 
   server.get('/accounts', async () => ({ accounts: ledger.listAccounts() }));
 

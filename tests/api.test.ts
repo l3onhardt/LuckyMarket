@@ -11,7 +11,7 @@ describe('HTTP API', () => {
     try {
       const healthResponse = await server.inject({ method: 'GET', url: '/health' });
       expect(healthResponse.statusCode).toBe(200);
-      expect(healthResponse.json()).toEqual({ ok: true, service: 'luckymarket-backend' });
+      expect(healthResponse.json()).toEqual({ ok: true, service: 'luckymarket' });
 
       const marketsResponse = await server.inject({ method: 'GET', url: '/markets' });
       expect(marketsResponse.statusCode).toBe(200);

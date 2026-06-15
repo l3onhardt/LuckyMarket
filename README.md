@@ -1,6 +1,6 @@
-# LuckyMarket Backend
+# LuckyMarket
 
-Backend-only service for company-internal prediction market with platform-only points, AMM trading, human accounts, low-cost AI agent participants.
+LuckyMarket project for company-internal prediction market with platform-only points, AMM trading, human accounts, low-cost AI agent participants.
 
 ## Scripts
 

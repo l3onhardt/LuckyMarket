@@ -1,4 +1,4 @@
-# LuckyMarket Backend Implementation Plan
+# LuckyMarket Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -14,7 +14,7 @@
 
 Approved design spec:
 
-- `docs/superpowers/specs/2026-06-15-luckymarket-backend-design.md`
+- `docs/superpowers/specs/2026-06-15-luckymarket-design.md`
 
 ## File Structure
 
@@ -23,7 +23,7 @@ Create these files:
 - `package.json`: scripts, dependencies, package metadata.
 - `tsconfig.json`: strict TypeScript config.
 - `vitest.config.ts`: Vitest config.
-- `README.md`: backend setup and API handoff notes.
+- `README.md`: project setup and API handoff notes.
 - `src/config.ts`: reads `PORT`, `DATABASE_URL`, scheduler settings.
 - `src/domain/errors.ts`: `AppError`, error codes, HTTP mapping.
 - `src/domain/types.ts`: domain enums and DTO shapes.
@@ -65,7 +65,7 @@ Create `package.json`:
 
 ```json
 {
-  "name": "luckymarket-backend",
+  "name": "luckymarket",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -1561,7 +1561,7 @@ describe('HTTP API', () => {
 
     const health = await app.inject({ method: 'GET', url: '/health' });
     expect(health.statusCode).toBe(200);
-    expect(health.json()).toEqual({ ok: true, service: 'luckymarket-backend' });
+    expect(health.json()).toEqual({ ok: true, service: 'luckymarket' });
 
     const markets = await app.inject({ method: 'GET', url: '/markets' });
     expect(markets.statusCode).toBe(200);
@@ -1723,9 +1723,9 @@ Expected: API test, full suite, and build pass.
 Create `README.md` with:
 
 ```md
-# LuckyMarket Backend
+# LuckyMarket
 
-Backend-only service for a company-internal prediction market with platform-only points, AMM trading, human accounts, and low-cost AI agent participants.
+LuckyMarket project for a company-internal prediction market with platform-only points, AMM trading, human accounts, and low-cost AI agent participants.
 
 ## Scripts
 
@@ -1801,11 +1801,11 @@ curl http://localhost:4000/health
 curl http://localhost:4000/markets
 ```
 
-Expected: health returns `{ "ok": true, "service": "luckymarket-backend" }`; markets returns seeded markets after `POST /seed/demo` or `npm run seed`.
+Expected: health returns `{ "ok": true, "service": "luckymarket" }`; markets returns seeded markets after `POST /seed/demo` or `npm run seed`.
 
 ## Plan Self-Review
 
-- Spec coverage: The plan covers backend-only scope, modular monolith architecture, AMM market engine, append-only points ledger, accounts, AI task-agent model, scheduler, API surface, seed data, and tests.
+- Spec coverage: The plan covers the backend V1 phase, modular monolith architecture, AMM market engine, append-only points ledger, accounts, AI task-agent model, scheduler, API surface, seed data, and tests.
 - Placeholder scan: No task depends on undefined future frontend work. The only future upgrade references are explicitly non-V1, such as order book migration and optional LLM hooks.
 - Type consistency: Core service names are stable across tests and implementation tasks: `LedgerService`, `MarketService`, `AgentService`, and `SchedulerService`.
 - Scope check: This is large but cohesive as one backend V1 because market, ledger, settlement, and agents must integrate to produce working software. Frontend remains separate.

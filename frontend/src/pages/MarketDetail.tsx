@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { formatDate, formatPoints, formatProbability } from '@/lib/utils';
 import { categoryLabel } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/Skeleton';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function MarketDetail() {
   const { id } = useParams();
@@ -18,6 +19,7 @@ export default function MarketDetail() {
   const activityQuery = useMarketActivity(id);
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<string>('');
   const [shares, setShares] = useState(2);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const quoteMutation = useQuote(id);
   const tradeMutation = usePlaceTrade(id);
 
@@ -180,7 +182,7 @@ export default function MarketDetail() {
               type="button"
               onClick={handleQuote}
               disabled={!effectiveSelectedOutcomeId || quoteMutation.isPending}
-              className="fluid-glass-button flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white"
+              className="fluid-glass-button flex min-h-[48px] w-full items-center justify-center gap-2 px-4 text-base font-medium text-white"
             >
               {quoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp size={16} />}
               预估报价
@@ -198,9 +200,9 @@ export default function MarketDetail() {
 
             <button
               type="button"
-              onClick={handleTrade}
+              onClick={() => setConfirmOpen(true)}
               disabled={market.status !== 'open' || !effectiveSelectedOutcomeId || tradeMutation.isPending}
-              className="outcome-yes flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              className="outcome-yes flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white disabled:opacity-50"
             >
               {tradeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={16} />}
               确认买入
@@ -208,6 +210,24 @@ export default function MarketDetail() {
           </div>
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="确认交易"
+        confirmLabel="确认买入"
+        pending={tradeMutation.isPending}
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          await handleTrade();
+        }}
+      >
+        <div>市场：{market.title}</div>
+        <div>选择：{selectedOutcome?.label}</div>
+        <div>份额：{shares}</div>
+        {quoteMutation.data && <div>预计点数：{formatPoints(quoteMutation.data.pointsAmount)}</div>}
+        <div className="text-slate-400">确认后将按当前市价成交并扣除点数。</div>
+      </ConfirmDialog>
     </div>
   );
 }

@@ -122,6 +122,10 @@ export async function registerRoutes(server: FastifyInstance, options: RegisterR
     activity: markets.getActivity(request.params.id)
   }));
 
+  server.get<{ Params: { id: string } }>('/markets/:id/price-history', async (request) => ({
+    history: markets.getPriceHistory(request.params.id)
+  }));
+
   server.get('/agents', async () => ({ agents: agents.listAgents() }));
 
   server.get<{ Params: { id: string } }>('/agents/:id', async (request) => ({

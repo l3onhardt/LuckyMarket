@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getMarket,
   getMarketActivity,
+  getMarketPriceHistory,
   listMarkets,
   placeTrade,
   quoteTrade,
@@ -31,6 +32,15 @@ export function useMarketActivity(id: string | undefined) {
     queryFn: () => getMarketActivity(id as string),
     enabled: Boolean(id),
     refetchInterval: 5000,
+  });
+}
+
+export function useMarketPriceHistory(id: string | undefined) {
+  return useQuery({
+    queryKey: ['market', id, 'price-history'],
+    queryFn: () => getMarketPriceHistory(id as string),
+    enabled: Boolean(id),
+    refetchInterval: 10000,
   });
 }
 

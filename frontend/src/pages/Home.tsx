@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Activity, ChevronRight, Clock, Database } from 'lucide-react';
 import { useMarkets } from '@/hooks/useMarkets';
@@ -5,6 +7,10 @@ import { seedDemoData } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 import { formatDate, formatProbability } from '@/lib/utils';
 import type { Market } from '@/types';
+import { categoryLabel } from '@/lib/i18n';
+import { MarketCardSkeleton } from '@/components/ui/Skeleton';
+import CategoryTabs from '@/components/market/CategoryTabs';
+import { staggerContainer, listItem } from '@/lib/motion';
 
 function statusLabel(status: Market['status']) {
   if (status === 'open') return '开放交易';
@@ -20,10 +26,10 @@ function MarketCard({ market }: { market: Market }) {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-blue-400/10 px-2 py-1 text-xs font-medium text-blue-200">
-              {market.category}
+            <span className="rounded-full bg-blue-400/10 px-2 py-1 text-sm font-medium text-blue-200">
+              {categoryLabel(market.category)}
             </span>
-            <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-200">
+            <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-sm font-medium text-emerald-200">
               {statusLabel(market.status)}
             </span>
           </div>
@@ -44,7 +50,7 @@ function MarketCard({ market }: { market: Market }) {
               }`}
             >
               <div className="text-sm text-slate-300">{outcome.label}</div>
-              <div className="mt-1 text-2xl font-bold text-white">{formatProbability(price)}</div>
+              <div className="mt-1 text-3xl font-bold text-white">{formatProbability(price)}</div>
             </div>
           );
         })}
@@ -61,6 +67,11 @@ function MarketCard({ market }: { market: Market }) {
 export default function Home() {
   const marketsQuery = useMarkets();
   const toast = useToast();
+  const [activeCategory, setActiveCategory] = useState('all');
+  const categories = [...new Set((marketsQuery.data ?? []).map((m) => m.category))];
+  const visibleMarkets = (marketsQuery.data ?? []).filter(
+    (m) => activeCategory === 'all' || m.category === activeCategory,
+  );
 
   const handleSeed = async () => {
     await seedDemoData();
@@ -91,7 +102,18 @@ export default function Home() {
         </button>
       </div>
 
-      {marketsQuery.isLoading && <div className="fluid-glass-card p-6 text-slate-300">正在加载市场...</div>}
+      {categories.length > 0 && (
+        <CategoryTabs categories={categories} active={activeCategory} onChange={setActiveCategory} />
+      )}
+
+      {marketsQuery.isLoading && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <MarketCardSkeleton />
+          <MarketCardSkeleton />
+          <MarketCardSkeleton />
+          <MarketCardSkeleton />
+        </div>
+      )}
       {marketsQuery.isError && (
         <div className="fluid-glass-card border-red-400/30 p-6 text-red-200">
           无法连接后端，请先启动 http://localhost:4000。
@@ -100,11 +122,18 @@ export default function Home() {
       {marketsQuery.data && marketsQuery.data.length === 0 && (
         <div className="fluid-glass-card p-6 text-slate-300">暂无市场，点击“准备演示数据”。</div>
       )}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {marketsQuery.data?.map((market) => (
-          <MarketCard key={market.id} market={market} />
+      <motion.div
+        className="grid gap-4 lg:grid-cols-2"
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
+        {visibleMarkets.map((market) => (
+          <motion.div key={market.id} variants={listItem}>
+            <MarketCard market={market} />
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }

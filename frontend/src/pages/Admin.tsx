@@ -4,6 +4,7 @@ import { CheckCircle2, Lock, PlusCircle, Settings } from 'lucide-react';
 import { closeMarket, createMarket, listMarkets, settleMarket } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 import { formatDate, formatProbability } from '@/lib/utils';
+import { marketStatusLabel } from '@/lib/i18n';
 
 const defaultCloseTime = () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
 
@@ -62,7 +63,7 @@ export default function Admin() {
       <div className="mb-6">
         <p className="mb-2 flex items-center gap-2 text-sm text-emerald-200">
           <Settings size={16} />
-          Single Admin Mode
+          单管理员模式
         </p>
         <h1 className="text-3xl font-bold text-white">管理控制台</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
@@ -130,9 +131,9 @@ export default function Admin() {
               <div key={market.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                   <div>
-                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
                       <span className="rounded-full bg-blue-400/10 px-2 py-1 text-blue-200">{market.category}</span>
-                      <span className="rounded-full bg-slate-400/10 px-2 py-1 text-slate-200">{market.status}</span>
+                      <span className="rounded-full bg-slate-400/10 px-2 py-1 text-slate-200">{marketStatusLabel(market.status)}</span>
                       <span className="text-slate-500">截止 {formatDate(market.closeTime)}</span>
                     </div>
                     <h3 className="font-semibold text-white">{market.title}</h3>
@@ -140,7 +141,7 @@ export default function Admin() {
                       {market.outcomes.map((outcome) => {
                         const price = market.prices.find((item) => item.outcomeId === outcome.id)?.price ?? 0;
                         return (
-                          <span key={outcome.id} className="rounded-lg border border-white/10 bg-slate-900/60 px-2 py-1 text-xs text-slate-300">
+                          <span key={outcome.id} className="rounded-lg border border-white/10 bg-slate-900/60 px-2 py-1 text-sm text-slate-300">
                             {outcome.label} {formatProbability(price)}
                           </span>
                         );

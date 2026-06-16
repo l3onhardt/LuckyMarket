@@ -2,10 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Loader2, Send, TrendingUp } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMarket, useMarketActivity, usePlaceTrade, useQuote } from '@/hooks/useMarkets';
+import { useMarket, useMarketActivity, useMarketPriceHistory, usePlaceTrade, useQuote } from '@/hooks/useMarkets';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate, formatPoints, formatProbability } from '@/lib/utils';
+import { categoryLabel } from '@/lib/i18n';
+import { Skeleton } from '@/components/ui/Skeleton';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import PriceChart from '@/components/market/PriceChart';
 
 export default function MarketDetail() {
   const { id } = useParams();
@@ -14,8 +18,10 @@ export default function MarketDetail() {
   const toast = useToast();
   const marketQuery = useMarket(id);
   const activityQuery = useMarketActivity(id);
+  const historyQuery = useMarketPriceHistory(id);
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<string>('');
   const [shares, setShares] = useState(2);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const quoteMutation = useQuote(id);
   const tradeMutation = usePlaceTrade(id);
 
@@ -53,7 +59,16 @@ export default function MarketDetail() {
   };
 
   if (marketQuery.isLoading) {
-    return <div className="mx-auto max-w-5xl px-4 py-8 text-slate-300">正在加载市场...</div>;
+    return (
+      <div className="mx-auto max-w-7xl space-y-5 px-4 pb-24 pt-6 sm:px-6 lg:px-8">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-40 w-full" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      </div>
+    );
   }
 
   if (!market) {
@@ -76,11 +91,11 @@ export default function MarketDetail() {
         <section className="space-y-5">
           <div className="fluid-glass-card p-6">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-blue-400/10 px-2 py-1 text-xs text-blue-200">{market.category}</span>
-              <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-xs text-emerald-200">
+              <span className="rounded-full bg-blue-400/10 px-2 py-1 text-sm text-blue-200">{categoryLabel(market.category)}</span>
+              <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-sm text-emerald-200">
                 {market.status === 'open' ? '开放交易' : market.status === 'closed' ? '已关闭' : '已结算'}
               </span>
-              <span className="text-xs text-slate-400">截止 {formatDate(market.closeTime)}</span>
+              <span className="text-sm text-slate-400">截止 {formatDate(market.closeTime)}</span>
             </div>
             <h1 className="text-3xl font-bold leading-10 text-white">{market.title}</h1>
             <p className="mt-3 text-sm text-slate-400">结算来源：{market.settlementSource}</p>
@@ -103,11 +118,16 @@ export default function MarketDetail() {
                     <span className="text-sm text-slate-300">{outcome.label}</span>
                     {selected && <CheckCircle2 className="h-5 w-5 text-emerald-300" />}
                   </div>
-                  <div className="text-4xl font-bold text-white">{formatProbability(price)}</div>
-                  <div className="mt-2 text-xs text-slate-500">池数量 {outcome.poolQuantity.toFixed(2)}</div>
+                  <div className="text-5xl font-bold text-white">{formatProbability(price)}</div>
+                  <div className="mt-2 text-sm text-slate-500">池数量 {outcome.poolQuantity.toFixed(2)}</div>
                 </button>
               );
             })}
+          </div>
+
+          <div className="fluid-glass-card p-6">
+            <h2 className="mb-4 text-xl font-semibold text-white">价格走势</h2>
+            <PriceChart snapshots={historyQuery.data ?? []} outcomes={market.outcomes} />
           </div>
 
           <div className="fluid-glass-card p-6">
@@ -121,9 +141,9 @@ export default function MarketDetail() {
                   <div key={item.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-medium text-slate-200">{item.message}</span>
-                      <span className="text-xs text-slate-500">{formatDate(item.createdAt)}</span>
+                      <span className="text-sm text-slate-500">{formatDate(item.createdAt)}</span>
                     </div>
-                    <div className="mt-1 text-xs uppercase tracking-wide text-slate-500">{item.type}</div>
+                    <div className="mt-1 text-sm uppercase tracking-wide text-slate-500">{item.type}</div>
                   </div>
                 ))
               ) : (
@@ -169,7 +189,7 @@ export default function MarketDetail() {
               type="button"
               onClick={handleQuote}
               disabled={!effectiveSelectedOutcomeId || quoteMutation.isPending}
-              className="fluid-glass-button flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white"
+              className="fluid-glass-button flex min-h-[48px] w-full items-center justify-center gap-2 px-4 text-base font-medium text-white"
             >
               {quoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp size={16} />}
               预估报价
@@ -187,9 +207,9 @@ export default function MarketDetail() {
 
             <button
               type="button"
-              onClick={handleTrade}
+              onClick={() => setConfirmOpen(true)}
               disabled={market.status !== 'open' || !effectiveSelectedOutcomeId || tradeMutation.isPending}
-              className="outcome-yes flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              className="outcome-yes flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white disabled:opacity-50"
             >
               {tradeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={16} />}
               确认买入
@@ -197,6 +217,24 @@ export default function MarketDetail() {
           </div>
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="确认交易"
+        confirmLabel="确认买入"
+        pending={tradeMutation.isPending}
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          await handleTrade();
+        }}
+      >
+        <div>市场：{market.title}</div>
+        <div>选择：{selectedOutcome?.label}</div>
+        <div>份额：{shares}</div>
+        {quoteMutation.data && <div>预计点数：{formatPoints(quoteMutation.data.pointsAmount)}</div>}
+        <div className="text-slate-400">确认后将按当前市价成交并扣除点数。</div>
+      </ConfirmDialog>
     </div>
   );
 }

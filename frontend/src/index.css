@@ -1,6 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-success: #10b981; /* YES / 看涨 / 成功 */
+  --color-primary: #60a5fa; /* 操作 / 链接 / 选中 */
+  --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+}
 
 @layer base {
   * {

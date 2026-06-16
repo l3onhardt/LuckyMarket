@@ -40,7 +40,7 @@ export default function Portfolio() {
       <div className="mb-6">
         <p className="mb-2 flex items-center gap-2 text-sm text-emerald-200">
           <Wallet size={16} />
-          Admin Portfolio
+          我的组合
         </p>
         <h1 className="text-3xl font-bold text-white">管理员组合</h1>
       </div>
@@ -74,15 +74,15 @@ export default function Portfolio() {
                     <div className="mt-1 font-semibold text-white">{market?.title ?? position.marketId}</div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-3">
                       <div>
-                        <div className="text-xs text-slate-500">结果</div>
+                        <div className="text-sm text-slate-500">结果</div>
                         <div className="text-sm text-slate-200">{outcome?.label ?? position.outcomeId}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-slate-500">份额</div>
+                        <div className="text-sm text-slate-500">份额</div>
                         <div className="text-sm text-slate-200">{position.shares.toFixed(2)}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-slate-500">当前概率</div>
+                        <div className="text-sm text-slate-500">当前概率</div>
                         <div className="text-sm text-slate-200">{formatProbability(price)}</div>
                       </div>
                     </div>
@@ -109,7 +109,7 @@ export default function Portfolio() {
                     {entry.amount >= 0 ? '+' : ''}{formatPoints(entry.amount)}
                   </span>
                 </div>
-                <div className="mt-1 text-xs text-slate-500">{formatDate(entry.createdAt)} · {entry.type}</div>
+                <div className="mt-1 text-sm text-slate-500">{formatDate(entry.createdAt)} · {entry.type}</div>
               </div>
             ))}
             {!ledgerQuery.data?.length && <div className="text-sm text-slate-400">暂无流水或后端正在加载。</div>}

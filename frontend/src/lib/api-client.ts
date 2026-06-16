@@ -6,6 +6,7 @@ import type {
   LedgerEntry,
   Market,
   Position,
+  PriceSnapshot,
   SchedulerTickResult,
   TradeQuote,
   TradeRecord,
@@ -80,6 +81,11 @@ export async function getMarket(id: string): Promise<Market> {
 export async function getMarketActivity(marketId: string): Promise<Activity[]> {
   const response = await apiClient.get<{ activity: Activity[] }>(`/markets/${marketId}/activity`);
   return response.data.activity;
+}
+
+export async function getMarketPriceHistory(marketId: string): Promise<PriceSnapshot[]> {
+  const response = await apiClient.get<{ history: PriceSnapshot[] }>(`/markets/${marketId}/price-history`);
+  return response.data.history;
 }
 
 // ==================== Trade APIs ====================

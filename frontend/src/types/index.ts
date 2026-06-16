@@ -131,3 +131,9 @@ export interface AuthResponse {
   token: string;
   account: Account;
 }
+
+export interface PriceSnapshot {
+  outcomeId: string;
+  price: number;
+  createdAt: string;
+}

@@ -139,4 +139,29 @@ describe('HTTP API', () => {
       db.close();
     }
   });
+
+  test('returns price history after a trade', async () => {
+    const db = createTestDb();
+    await seedDemoDataForTest(db);
+    const server = await buildServer({ db, schedulerEnabled: false, maxAgentsPerTick: 2 });
+    try {
+      const market = (await server.inject({ method: 'GET', url: '/markets' }))
+        .json<{ markets: Array<{ id: string; outcomes: Array<{ id: string }> }> }>().markets[0];
+      const accountId = (await server.inject({ method: 'GET', url: '/accounts/handle/wang-ge' }))
+        .json<{ account: { id: string } }>().account.id;
+      await server.inject({
+        method: 'POST',
+        url: `/markets/${market.id}/trades`,
+        payload: { accountId, outcomeId: market.outcomes[0].id, side: 'buy', shares: 2 }
+      });
+
+      const res = await server.inject({ method: 'GET', url: `/markets/${market.id}/price-history` });
+      expect(res.statusCode).toBe(200);
+      const history = res.json<{ history: Array<{ outcomeId: string; price: number; createdAt: string }> }>().history;
+      expect(history.length).toBeGreaterThanOrEqual(market.outcomes.length);
+    } finally {
+      await server.close();
+      db.close();
+    }
+  });
 });

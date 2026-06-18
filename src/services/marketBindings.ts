@@ -102,6 +102,8 @@ function monthFromCloseTime(closeTime: string): string | null {
 }
 
 function inferAttendanceSubject(title: string): { subjectId: string; subjectLabel: string } | null {
+  // v1 intentionally stays deterministic and narrow: this only recognizes the
+  // Wang Ge attendance market pattern specified by the task brief.
   if (title.includes('王哥') || /wang\s*ge/i.test(title)) {
     return { subjectId: 'wang-ge', subjectLabel: '王哥' };
   }
@@ -231,5 +233,8 @@ export class MarketBindingService {
     assertNonEmpty(input.suggestedBy, 'suggestedBy');
     assertMetricKeys(input.metricKeys);
     assertStatus(input.status);
+    if (input.status === 'active') {
+      assertNonEmpty(input.confirmedBy ?? '', 'confirmedBy');
+    }
   }
 }

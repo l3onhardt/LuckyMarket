@@ -45,6 +45,41 @@ describe('MarketBindingService', () => {
     db.close();
   });
 
+  test('rejects active bindings without admin confirmation', () => {
+    const { db, market, bindings } = setup();
+
+    expect(() =>
+      bindings.createBinding({
+        marketId: market.id,
+        eventType: 'attendance.monthly_summary_updated',
+        subjectType: 'person',
+        subjectId: 'wang-ge',
+        subjectLabel: '王哥',
+        period: '2026-06',
+        metricKeys: ['restDaysSoFar'],
+        status: 'active',
+        suggestedBy: 'rule'
+      })
+    ).toThrowError('confirmedBy is required');
+
+    expect(() =>
+      bindings.createBinding({
+        marketId: market.id,
+        eventType: 'attendance.monthly_summary_updated',
+        subjectType: 'person',
+        subjectId: 'wang-ge',
+        subjectLabel: '王哥',
+        period: '2026-06',
+        metricKeys: ['restDaysSoFar'],
+        status: 'active',
+        suggestedBy: 'rule',
+        confirmedBy: null
+      })
+    ).toThrowError('confirmedBy is required');
+
+    db.close();
+  });
+
   test('creates confirmed binding and matches related event only', () => {
     const { db, market, worldEvents, bindings } = setup();
     const binding = bindings.createBinding({

@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { AppError } from '../src/domain/errors.js';
 import { LedgerService } from '../src/services/ledger.js';
 import { MarketBindingService } from '../src/services/marketBindings.js';
 import { MarketService } from '../src/services/markets.js';
@@ -24,6 +25,10 @@ function setup() {
 }
 
 describe('MarketBindingService', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test('suggests an attendance binding for Wang Ge monthly rest market', () => {
     const { db, market, bindings } = setup();
 
@@ -127,6 +132,67 @@ describe('MarketBindingService', () => {
     expect(bindings.listBindingsForMarket(market.id)).toEqual([binding]);
     expect(bindings.findMatchingBindings(related)).toEqual([binding]);
     expect(bindings.findMatchingBindings(unrelated)).toEqual([]);
+    expect(worldEvents.listEventsForMarket(market.id)).toEqual([related]);
+
+    db.close();
+  });
+
+  test('rejects duplicate bindings for the same identity including null period', () => {
+    const { db, market, bindings } = setup();
+    const input = {
+      marketId: market.id,
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: null,
+      metricKeys: ['restDaysSoFar'],
+      status: 'active' as const,
+      suggestedBy: 'rule',
+      confirmedBy: 'admin'
+    };
+
+    const binding = bindings.createBinding(input);
+
+    expect(() => bindings.createBinding(input)).toThrowError(AppError);
+    expect(() => bindings.createBinding(input)).toThrowError('already exists');
+    expect(bindings.listBindingsForMarket(market.id)).toEqual([binding]);
+
+    db.close();
+  });
+
+  test('lists newest bindings first', () => {
+    const { db, market, bindings } = setup();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-18T10:00:00.000Z'));
+
+    const first = bindings.createBinding({
+      marketId: market.id,
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-05',
+      metricKeys: ['restDaysSoFar'],
+      status: 'disabled',
+      suggestedBy: 'rule'
+    });
+
+    vi.setSystemTime(new Date('2026-06-18T10:00:01.000Z'));
+    const second = bindings.createBinding({
+      marketId: market.id,
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-06',
+      metricKeys: ['restDaysSoFar'],
+      status: 'active',
+      suggestedBy: 'rule',
+      confirmedBy: 'admin'
+    });
+
+    expect(bindings.listBindingsForMarket(market.id)).toEqual([second, first]);
 
     db.close();
   });

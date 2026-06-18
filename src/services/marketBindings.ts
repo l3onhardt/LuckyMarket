@@ -50,6 +50,10 @@ interface MarketEventBindingRow {
   updated_at: string;
 }
 
+interface ExistingBindingIdentityRow {
+  id: string;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -121,6 +125,8 @@ export class MarketBindingService {
     this.markets.getMarket(input.marketId);
 
     return inTransaction(this.db, () => {
+      this.assertNoDuplicateBinding(input);
+
       const id = newId('meb');
       const createdAt = nowIso();
       const updatedAt = createdAt;
@@ -159,7 +165,7 @@ export class MarketBindingService {
       .prepare(
         `SELECT * FROM market_event_bindings
          WHERE market_id = ?
-         ORDER BY created_at ASC, id ASC`
+         ORDER BY created_at DESC, id DESC`
       )
       .all(marketId) as MarketEventBindingRow[];
 
@@ -222,6 +228,35 @@ export class MarketBindingService {
       throw new AppError('NOT_FOUND', `Market event binding not found: ${id}`, 404);
     }
     return mapBinding(row);
+  }
+
+  private assertNoDuplicateBinding(input: CreateMarketBindingInput): void {
+    const existing = this.db
+      .prepare(
+        `SELECT id
+         FROM market_event_bindings
+         WHERE market_id = ?
+           AND event_type = ?
+           AND subject_type = ?
+           AND subject_id = ?
+           AND ((period IS NULL AND ? IS NULL) OR period = ?)
+         LIMIT 1`
+      )
+      .get(
+        input.marketId,
+        input.eventType,
+        input.subjectType,
+        input.subjectId,
+        input.period ?? null,
+        input.period ?? null
+      ) as ExistingBindingIdentityRow | undefined;
+
+    if (existing) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'Market event binding already exists for this market, event, subject, and period'
+      );
+    }
   }
 
   private validateInput(input: CreateMarketBindingInput): void {

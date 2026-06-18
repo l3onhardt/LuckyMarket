@@ -135,5 +135,23 @@ export function createSchema(db: Db): void {
       effective_at TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS world_events (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      source_ref TEXT,
+      subject_type TEXT NOT NULL,
+      subject_id TEXT NOT NULL,
+      subject_label TEXT NOT NULL,
+      period TEXT,
+      effective_at TEXT NOT NULL,
+      observed_at TEXT NOT NULL,
+      confidence TEXT NOT NULL CHECK (confidence IN ('low', 'medium', 'high')),
+      summary TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      dedupe_key TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    );
   `);
 }

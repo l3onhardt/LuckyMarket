@@ -39,3 +39,23 @@ export interface Market {
   liquidityParameter: number;
   createdAt: string;
 }
+
+export type WorldEventConfidence = 'low' | 'medium' | 'high';
+
+export interface WorldEvent {
+  id: string;
+  type: string;
+  source: string;
+  sourceRef: string | null;
+  subjectType: string;
+  subjectId: string;
+  subjectLabel: string;
+  period: string | null;
+  effectiveAt: string;
+  observedAt: string;
+  confidence: WorldEventConfidence;
+  summary: string;
+  payload: Record<string, unknown>;
+  dedupeKey: string;
+  createdAt: string;
+}

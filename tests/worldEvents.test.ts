@@ -225,4 +225,28 @@ describe('WorldEventService', () => {
 
     db.close();
   });
+
+  test('rejects invalid confidence values', () => {
+    const db = createTestDb();
+    const events = new WorldEventService(db);
+
+    expect(() =>
+      events.createEvent({
+        type: 'attendance.monthly_summary_updated',
+        source: 'manual_admin',
+        subjectType: 'person',
+        subjectId: 'wang-ge',
+        subjectLabel: '王哥',
+        period: '2026-06',
+        effectiveAt: '2026-06-18T12:00:00.000Z',
+        observedAt: '2026-06-18T12:05:00.000Z',
+        confidence: 'urgent' as unknown as 'low' | 'medium' | 'high',
+        summary: '王哥 2026-06 已休息 6 天。',
+        payload: { restDaysSoFar: 6 },
+        dedupeKey: 'manual:wang-ge:bad-confidence'
+      })
+    ).toThrow(AppError);
+
+    db.close();
+  });
 });

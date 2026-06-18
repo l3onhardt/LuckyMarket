@@ -81,6 +81,12 @@ function assertPlainObject(value: unknown, field: string): asserts value is Reco
   }
 }
 
+function assertConfidence(value: string): asserts value is WorldEventConfidence {
+  if (value !== 'low' && value !== 'medium' && value !== 'high') {
+    throw new AppError('VALIDATION_ERROR', 'confidence must be low, medium, or high');
+  }
+}
+
 function mapWorldEvent(row: WorldEventRow): WorldEvent {
   return {
     id: row.id,
@@ -222,6 +228,7 @@ export class WorldEventService {
     assertNonEmpty(input.dedupeKey, 'dedupeKey');
     assertIso(input.effectiveAt, 'effectiveAt');
     assertIso(input.observedAt, 'observedAt');
+    assertConfidence(input.confidence);
     assertPlainObject(input.payload, 'payload');
   }
 }

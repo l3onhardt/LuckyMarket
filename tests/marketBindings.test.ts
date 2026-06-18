@@ -50,6 +50,27 @@ describe('MarketBindingService', () => {
     db.close();
   });
 
+  test('uses a deliberately narrow deterministic attendance suggestion rule set', () => {
+    const { db } = setup();
+    const isolatedDb = createTestDb();
+    const isolatedLedger = new LedgerService(isolatedDb);
+    const isolatedMarkets = new MarketService(isolatedDb, isolatedLedger);
+    const isolatedBindings = new MarketBindingService(isolatedDb, isolatedMarkets);
+    const otherAttendanceMarket = isolatedMarkets.createMarket({
+      title: '小李将在6月休息几天？',
+      category: 'attendance',
+      closeTime: '2026-06-30T10:00:00.000Z',
+      settlementSource: '公司考勤记录',
+      outcomes: ['0-1天', '2-3天', '4-5天', '6天以上'],
+      liquidityParameter: 100
+    });
+
+    expect(isolatedBindings.suggestBindings(otherAttendanceMarket.id)).toEqual([]);
+
+    db.close();
+    isolatedDb.close();
+  });
+
   test('rejects active bindings without admin confirmation', () => {
     const { db, market, bindings } = setup();
 
@@ -81,6 +102,38 @@ describe('MarketBindingService', () => {
         confirmedBy: null
       })
     ).toThrowError('confirmedBy is required');
+
+    db.close();
+  });
+
+  test('allows suggested or disabled bindings without admin confirmation', () => {
+    const { db, market, bindings } = setup();
+
+    const suggested = bindings.createBinding({
+      marketId: market.id,
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-05',
+      metricKeys: ['restDaysSoFar'],
+      status: 'suggested',
+      suggestedBy: 'rule'
+    });
+    const disabled = bindings.createBinding({
+      marketId: market.id,
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-07',
+      metricKeys: ['restDaysSoFar'],
+      status: 'disabled',
+      suggestedBy: 'admin'
+    });
+
+    expect(suggested.confirmedBy).toBeNull();
+    expect(disabled.confirmedBy).toBeNull();
 
     db.close();
   });
@@ -153,10 +206,53 @@ describe('MarketBindingService', () => {
     };
 
     const binding = bindings.createBinding(input);
+    const duplicateError = (() => {
+      try {
+        bindings.createBinding(input);
+        return null;
+      } catch (error) {
+        return error;
+      }
+    })();
 
-    expect(() => bindings.createBinding(input)).toThrowError(AppError);
-    expect(() => bindings.createBinding(input)).toThrowError('already exists');
+    expect(duplicateError).toBeInstanceOf(AppError);
+    expect((duplicateError as AppError).message).toContain('already exists');
     expect(bindings.listBindingsForMarket(market.id)).toEqual([binding]);
+
+    db.close();
+  });
+
+  test('throws a validation error when stored metric keys are corrupted', () => {
+    const { db, market, bindings } = setup();
+    const binding = bindings.createBinding({
+      marketId: market.id,
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-06',
+      metricKeys: ['restDaysSoFar'],
+      status: 'active',
+      suggestedBy: 'rule',
+      confirmedBy: 'admin'
+    });
+
+    db.prepare('UPDATE market_event_bindings SET metric_keys_json = ? WHERE id = ?').run(
+      '["restDaysSoFar", ""]',
+      binding.id
+    );
+
+    const readError = (() => {
+      try {
+        bindings.listBindingsForMarket(market.id);
+        return null;
+      } catch (error) {
+        return error;
+      }
+    })();
+
+    expect(readError).toBeInstanceOf(AppError);
+    expect((readError as AppError).message).toMatch(/metric keys/i);
 
     db.close();
   });

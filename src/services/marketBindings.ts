@@ -54,8 +54,40 @@ interface ExistingBindingIdentityRow {
   id: string;
 }
 
+interface AttendanceSuggestionRule {
+  name: string;
+  matches: (market: { title: string; category: string; settlementSource: string }) => boolean;
+  build: (market: { closeTime: string }) => MarketBindingSuggestion;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function decodeMetricKeys(metricKeysJson: string): string[] {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(metricKeysJson);
+  } catch {
+    throw new AppError('VALIDATION_ERROR', 'Stored market binding metric keys must be valid JSON');
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      'Stored market binding metric keys must be a non-empty string array'
+    );
+  }
+
+  if (parsed.some((metricKey) => typeof metricKey !== 'string' || !metricKey.trim())) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      'Stored market binding metric keys must be a non-empty string array without blank entries'
+    );
+  }
+
+  return parsed;
 }
 
 function mapBinding(row: MarketEventBindingRow): MarketEventBinding {
@@ -67,7 +99,7 @@ function mapBinding(row: MarketEventBindingRow): MarketEventBinding {
     subjectId: row.subject_id,
     subjectLabel: row.subject_label,
     period: row.period,
-    metricKeys: JSON.parse(row.metric_keys_json) as string[],
+    metricKeys: decodeMetricKeys(row.metric_keys_json),
     status: row.status,
     suggestedBy: row.suggested_by,
     confirmedBy: row.confirmed_by,
@@ -105,14 +137,26 @@ function monthFromCloseTime(closeTime: string): string | null {
   return parsed.toISOString().slice(0, 7);
 }
 
-function inferAttendanceSubject(title: string): { subjectId: string; subjectLabel: string } | null {
-  // v1 intentionally stays deterministic and narrow: this only recognizes the
-  // Wang Ge attendance market pattern specified by the task brief.
-  if (title.includes('王哥') || /wang\s*ge/i.test(title)) {
-    return { subjectId: 'wang-ge', subjectLabel: '王哥' };
+const ATTENDANCE_SUGGESTION_RULES: readonly AttendanceSuggestionRule[] = [
+  {
+    name: 'wang-ge-monthly-rest-days',
+    matches: (market) =>
+      market.category === 'attendance' &&
+      /(?:王哥|wang\s*ge)/i.test(market.title) &&
+      /(?:休息|考勤|attendance)/i.test(`${market.title} ${market.settlementSource}`),
+    build: (market) => ({
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: monthFromCloseTime(market.closeTime),
+      metricKeys: ['restDaysSoFar'],
+      confidence: 'medium',
+      explanation:
+        'Deterministic v1 rule: 王哥考勤市场可绑定到月度考勤汇总的休息天数证据，仍需管理员确认。'
+    })
   }
-  return null;
-}
+];
 
 export class MarketBindingService {
   constructor(
@@ -190,34 +234,11 @@ export class MarketBindingService {
 
   suggestBindings(marketId: string): MarketBindingSuggestion[] {
     const market = this.markets.getMarket(marketId);
-    const period = monthFromCloseTime(market.closeTime);
-    const subject = inferAttendanceSubject(market.title);
-    const lowerTitle = market.title.toLowerCase();
-    const lowerSource = market.settlementSource.toLowerCase();
-    const isAttendanceMarket =
-      market.category === 'attendance' ||
-      market.title.includes('休息') ||
-      market.title.includes('考勤') ||
-      lowerTitle.includes('attendance') ||
-      market.settlementSource.includes('考勤') ||
-      lowerSource.includes('attendance');
-
-    if (!isAttendanceMarket || !subject) {
-      return [];
-    }
-
-    return [
-      {
-        eventType: 'attendance.monthly_summary_updated',
-        subjectType: 'person',
-        subjectId: subject.subjectId,
-        subjectLabel: subject.subjectLabel,
-        period,
-        metricKeys: ['restDaysSoFar'],
-        confidence: 'medium',
-        explanation: `${subject.subjectLabel} 的月度考勤汇总事件可为该市场提供休息天数证据，仍需管理员确认绑定。`
-      }
-    ];
+    // v1 intentionally exposes a tiny deterministic rule table instead of
+    // pretending to infer bindings generically.
+    return ATTENDANCE_SUGGESTION_RULES.filter((rule) => rule.matches(market)).map((rule) =>
+      rule.build(market)
+    );
   }
 
   private getBinding(id: string): MarketEventBinding {

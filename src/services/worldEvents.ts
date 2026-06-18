@@ -50,6 +50,13 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function tableExists(db: Db, tableName: string): boolean {
+  const row = db
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(tableName) as { 1: number } | undefined;
+  return Boolean(row);
+}
+
 function assertNonEmpty(value: string, field: string): void {
   if (!value.trim()) {
     throw new AppError('VALIDATION_ERROR', `${field} is required`);
@@ -152,16 +159,23 @@ export class WorldEventService {
       clauses.push('period = ?');
       values.push(filter.period);
     }
-    const limit = Math.max(1, Math.min(Math.floor(filter.limit ?? 100), 500));
-    values.push(limit);
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const limitClause =
+      filter.limit === undefined ? '' : ' LIMIT ?';
+    if (filter.limit !== undefined) {
+      const limit = Math.max(1, Math.min(Math.floor(filter.limit), 500));
+      values.push(limit);
+    }
     const rows = this.db
-      .prepare(`SELECT * FROM world_events ${where} ORDER BY observed_at DESC, id DESC LIMIT ?`)
+      .prepare(`SELECT * FROM world_events ${where} ORDER BY observed_at DESC, id DESC${limitClause}`)
       .all(...values) as WorldEventRow[];
     return rows.map(mapWorldEvent);
   }
 
   listEventsForMarket(marketId: string): WorldEvent[] {
+    if (!tableExists(this.db, 'market_event_bindings')) {
+      return [];
+    }
     const rows = this.db
       .prepare(
         `SELECT DISTINCT world_events.*

@@ -107,4 +107,56 @@ describe('WorldEventService', () => {
 
     db.close();
   });
+
+  test('returns every event when no limit is provided', () => {
+    const db = createTestDb();
+    const events = new WorldEventService(db);
+
+    for (let i = 0; i < 101; i += 1) {
+      const hour = 12 + Math.floor(i / 60);
+      const minute = i % 60;
+      events.createEvent({
+        type: 'attendance.monthly_summary_updated',
+        source: 'manual_admin',
+        sourceRef: `admin-note-${i}`,
+        subjectType: 'person',
+        subjectId: `person-${i}`,
+        subjectLabel: `Person ${i}`,
+        period: '2026-06',
+        effectiveAt: '2026-06-18T12:00:00.000Z',
+        observedAt: `2026-06-18T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00.000Z`,
+        confidence: 'medium',
+        summary: `Person ${i} snapshot`,
+        payload: { rank: i },
+        dedupeKey: `manual:person-${i}`
+      });
+    }
+
+    expect(events.listEvents()).toHaveLength(101);
+
+    db.close();
+  });
+
+  test('returns an empty list for markets before bindings table exists', () => {
+    const db = createTestDb();
+    const events = new WorldEventService(db);
+    events.createEvent({
+      type: 'attendance.monthly_summary_updated',
+      source: 'manual_admin',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-06',
+      effectiveAt: '2026-06-18T12:00:00.000Z',
+      observedAt: '2026-06-18T12:05:00.000Z',
+      confidence: 'high',
+      summary: '王哥 2026-06 已休息 6 天。',
+      payload: { restDaysSoFar: 6 },
+      dedupeKey: 'manual:wang-ge:bindings-check'
+    });
+
+    expect(events.listEventsForMarket('mkt_missing_bindings_table')).toEqual([]);
+
+    db.close();
+  });
 });

@@ -153,5 +153,21 @@ export function createSchema(db: Db): void {
       dedupe_key TEXT NOT NULL UNIQUE,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS market_event_bindings (
+      id TEXT PRIMARY KEY,
+      market_id TEXT NOT NULL REFERENCES markets(id),
+      event_type TEXT NOT NULL,
+      subject_type TEXT NOT NULL,
+      subject_id TEXT NOT NULL,
+      subject_label TEXT NOT NULL,
+      period TEXT,
+      metric_keys_json TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('suggested', 'active', 'disabled')),
+      suggested_by TEXT NOT NULL,
+      confirmed_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 }

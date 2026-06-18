@@ -42,6 +42,8 @@ export interface Market {
 
 export type WorldEventConfidence = 'low' | 'medium' | 'high';
 
+export type MarketEventBindingStatus = 'suggested' | 'active' | 'disabled';
+
 export interface WorldEvent {
   id: string;
   type: string;
@@ -58,4 +60,20 @@ export interface WorldEvent {
   payload: Record<string, unknown>;
   dedupeKey: string;
   createdAt: string;
+}
+
+export interface MarketEventBinding {
+  id: string;
+  marketId: string;
+  eventType: string;
+  subjectType: string;
+  subjectId: string;
+  subjectLabel: string;
+  period: string | null;
+  metricKeys: string[];
+  status: MarketEventBindingStatus;
+  suggestedBy: string;
+  confirmedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

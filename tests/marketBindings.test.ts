@@ -192,7 +192,7 @@ describe('MarketBindingService', () => {
 
   test('rejects duplicate bindings for the same identity including null period', () => {
     const { db, market, bindings } = setup();
-    const input = {
+    const nullPeriodInput = {
       marketId: market.id,
       eventType: 'attendance.monthly_summary_updated',
       subjectType: 'person',
@@ -205,19 +205,104 @@ describe('MarketBindingService', () => {
       confirmedBy: 'admin'
     };
 
-    const binding = bindings.createBinding(input);
-    const duplicateError = (() => {
+    const nullPeriodBinding = bindings.createBinding(nullPeriodInput);
+    const nullPeriodDuplicateError = (() => {
       try {
-        bindings.createBinding(input);
+        bindings.createBinding(nullPeriodInput);
         return null;
       } catch (error) {
         return error;
       }
     })();
 
-    expect(duplicateError).toBeInstanceOf(AppError);
-    expect((duplicateError as AppError).message).toContain('already exists');
-    expect(bindings.listBindingsForMarket(market.id)).toEqual([binding]);
+    const periodInput = {
+      ...nullPeriodInput,
+      period: '2026-06'
+    };
+
+    const periodBinding = bindings.createBinding(periodInput);
+    const periodDuplicateError = (() => {
+      try {
+        bindings.createBinding(periodInput);
+        return null;
+      } catch (error) {
+        return error;
+      }
+    })();
+
+    expect(nullPeriodDuplicateError).toBeInstanceOf(AppError);
+    expect((nullPeriodDuplicateError as AppError).message).toContain('already exists');
+    expect(periodDuplicateError).toBeInstanceOf(AppError);
+    expect((periodDuplicateError as AppError).message).toContain('already exists');
+    expect(bindings.listBindingsForMarket(market.id)).toEqual(
+      expect.arrayContaining([nullPeriodBinding, periodBinding])
+    );
+
+    db.close();
+  });
+
+  test('database unique index rejects duplicate logical bindings for null and non-null periods', () => {
+    const { db, market } = setup();
+    const insert = db.prepare(
+      `INSERT INTO market_event_bindings (
+        id, market_id, event_type, subject_type, subject_id, subject_label,
+        period, metric_keys_json, status, suggested_by, confirmed_by,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    const commonValues = [
+      market.id,
+      'attendance.monthly_summary_updated',
+      'person',
+      'wang-ge',
+      '王哥',
+      '["restDaysSoFar"]',
+      'active',
+      'rule',
+      'admin',
+      '2026-06-18T12:00:00.000Z',
+      '2026-06-18T12:00:00.000Z'
+    ] as const;
+
+    insert.run('meb_null_1', ...commonValues.slice(0, 5), null, ...commonValues.slice(5));
+    insert.run('meb_period_1', ...commonValues.slice(0, 5), '2026-06', ...commonValues.slice(5));
+
+    expect(() =>
+      insert.run('meb_null_2', ...commonValues.slice(0, 5), null, ...commonValues.slice(5))
+    ).toThrow(/UNIQUE|constraint/i);
+    expect(() =>
+      insert.run('meb_period_2', ...commonValues.slice(0, 5), '2026-06', ...commonValues.slice(5))
+    ).toThrow(/UNIQUE|constraint/i);
+
+    db.close();
+  });
+
+  test('rejects non-string metric keys with validation error', () => {
+    const { db, market, bindings } = setup();
+
+    const metricKeysError = (() => {
+      try {
+        bindings.createBinding({
+          marketId: market.id,
+          eventType: 'attendance.monthly_summary_updated',
+          subjectType: 'person',
+          subjectId: 'wang-ge',
+          subjectLabel: '王哥',
+          period: '2026-06',
+          metricKeys: [123 as unknown as string],
+          status: 'active',
+          suggestedBy: 'rule',
+          confirmedBy: 'admin'
+        });
+        return null;
+      } catch (error) {
+        return error;
+      }
+    })();
+
+    expect(metricKeysError).toBeInstanceOf(AppError);
+    expect((metricKeysError as AppError).code).toBe('VALIDATION_ERROR');
+    expect((metricKeysError as AppError).message).toMatch(/metricKeys/i);
 
     db.close();
   });

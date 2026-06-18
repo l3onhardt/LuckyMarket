@@ -118,6 +118,9 @@ function assertMetricKeys(metricKeys: string[]): void {
   if (!Array.isArray(metricKeys) || metricKeys.length === 0) {
     throw new AppError('VALIDATION_ERROR', 'metricKeys must contain at least one value');
   }
+  if (metricKeys.some((metricKey) => typeof metricKey !== 'string')) {
+    throw new AppError('VALIDATION_ERROR', 'metricKeys must contain only string values');
+  }
   if (metricKeys.some((metricKey) => !metricKey.trim())) {
     throw new AppError('VALIDATION_ERROR', 'metricKeys cannot contain empty values');
   }
@@ -175,29 +178,39 @@ export class MarketBindingService {
       const createdAt = nowIso();
       const updatedAt = createdAt;
 
-      this.db
-        .prepare(
-          `INSERT INTO market_event_bindings (
-            id, market_id, event_type, subject_type, subject_id, subject_label,
-            period, metric_keys_json, status, suggested_by, confirmed_by,
-            created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(
-          id,
-          input.marketId,
-          input.eventType,
-          input.subjectType,
-          input.subjectId,
-          input.subjectLabel,
-          input.period ?? null,
-          JSON.stringify(input.metricKeys),
-          input.status,
-          input.suggestedBy,
-          input.confirmedBy ?? null,
-          createdAt,
-          updatedAt
-        );
+      try {
+        this.db
+          .prepare(
+            `INSERT INTO market_event_bindings (
+              id, market_id, event_type, subject_type, subject_id, subject_label,
+              period, metric_keys_json, status, suggested_by, confirmed_by,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            id,
+            input.marketId,
+            input.eventType,
+            input.subjectType,
+            input.subjectId,
+            input.subjectLabel,
+            input.period ?? null,
+            JSON.stringify(input.metricKeys),
+            input.status,
+            input.suggestedBy,
+            input.confirmedBy ?? null,
+            createdAt,
+            updatedAt
+          );
+      } catch (error) {
+        if (this.isLogicalIdentityUniqueConstraint(error)) {
+          throw new AppError(
+            'VALIDATION_ERROR',
+            'Market event binding already exists for this market, event, subject, and period'
+          );
+        }
+        throw error;
+      }
 
       return this.getBinding(id);
     });
@@ -278,6 +291,13 @@ export class MarketBindingService {
         'Market event binding already exists for this market, event, subject, and period'
       );
     }
+  }
+
+  private isLogicalIdentityUniqueConstraint(error: unknown): boolean {
+    return (
+      error instanceof Error &&
+      error.message.includes('market_event_bindings_logical_identity_idx')
+    );
   }
 
   private validateInput(input: CreateMarketBindingInput): void {

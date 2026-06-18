@@ -169,5 +169,14 @@ export function createSchema(db: Db): void {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS market_event_bindings_logical_identity_idx
+    ON market_event_bindings (
+      market_id,
+      event_type,
+      subject_type,
+      subject_id,
+      COALESCE(period, '')
+    );
   `);
 }

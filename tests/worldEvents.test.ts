@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { AppError } from '../src/domain/errors.js';
 import { WorldEventService } from '../src/services/worldEvents.js';
 import { createTestDb } from './helpers.js';
 
@@ -156,6 +157,71 @@ describe('WorldEventService', () => {
     });
 
     expect(events.listEventsForMarket('mkt_missing_bindings_table')).toEqual([]);
+
+    db.close();
+  });
+
+  test('rejects non-normalized timestamps', () => {
+    const db = createTestDb();
+    const events = new WorldEventService(db);
+
+    expect(() =>
+      events.createEvent({
+        type: 'attendance.monthly_summary_updated',
+        source: 'manual_admin',
+        subjectType: 'person',
+        subjectId: 'wang-ge',
+        subjectLabel: '王哥',
+        period: '2026-06',
+        effectiveAt: '2026-06-18 12:00:00',
+        observedAt: '2026-06-18T12:05:00.000Z',
+        confidence: 'high',
+        summary: '王哥 2026-06 已休息 6 天。',
+        payload: { restDaysSoFar: 6 },
+        dedupeKey: 'manual:wang-ge:bad-time'
+      })
+    ).toThrow(AppError);
+
+    db.close();
+  });
+
+  test('rejects non-object payload values', () => {
+    const db = createTestDb();
+    const events = new WorldEventService(db);
+
+    expect(() =>
+      events.createEvent({
+        type: 'attendance.monthly_summary_updated',
+        source: 'manual_admin',
+        subjectType: 'person',
+        subjectId: 'wang-ge',
+        subjectLabel: '王哥',
+        period: '2026-06',
+        effectiveAt: '2026-06-18T12:00:00.000Z',
+        observedAt: '2026-06-18T12:05:00.000Z',
+        confidence: 'high',
+        summary: '王哥 2026-06 已休息 6 天。',
+        payload: null as unknown as Record<string, unknown>,
+        dedupeKey: 'manual:wang-ge:null-payload'
+      })
+    ).toThrow(AppError);
+
+    expect(() =>
+      events.createEvent({
+        type: 'attendance.monthly_summary_updated',
+        source: 'manual_admin',
+        subjectType: 'person',
+        subjectId: 'wang-ge',
+        subjectLabel: '王哥',
+        period: '2026-06',
+        effectiveAt: '2026-06-18T12:00:00.000Z',
+        observedAt: '2026-06-18T12:05:00.000Z',
+        confidence: 'high',
+        summary: '王哥 2026-06 已休息 6 天。',
+        payload: [] as unknown as Record<string, unknown>,
+        dedupeKey: 'manual:wang-ge:array-payload'
+      })
+    ).toThrow(AppError);
 
     db.close();
   });

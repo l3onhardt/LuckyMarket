@@ -64,8 +64,20 @@ function assertNonEmpty(value: string, field: string): void {
 }
 
 function assertIso(value: string, field: string): void {
-  if (Number.isNaN(Date.parse(value))) {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed) || new Date(value).toISOString() !== value) {
     throw new AppError('VALIDATION_ERROR', `${field} must be a valid ISO timestamp`);
+  }
+}
+
+function assertPlainObject(value: unknown, field: string): asserts value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AppError('VALIDATION_ERROR', `${field} must be a plain object`);
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new AppError('VALIDATION_ERROR', `${field} must be a plain object`);
   }
 }
 
@@ -210,5 +222,6 @@ export class WorldEventService {
     assertNonEmpty(input.dedupeKey, 'dedupeKey');
     assertIso(input.effectiveAt, 'effectiveAt');
     assertIso(input.observedAt, 'observedAt');
+    assertPlainObject(input.payload, 'payload');
   }
 }

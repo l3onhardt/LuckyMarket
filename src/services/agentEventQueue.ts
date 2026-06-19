@@ -35,6 +35,28 @@ interface QueueTarget {
   reason: string;
 }
 
+interface EventRoutingPolicy {
+  eventType: string;
+  focusCategory: string;
+  reasonsByStrategy: Partial<Record<AgentProfile['strategy'], string>>;
+  reasonPriority: Record<string, number>;
+}
+
+const EVENT_ROUTING_POLICIES: readonly EventRoutingPolicy[] = [
+  {
+    eventType: 'attendance.monthly_summary_updated',
+    focusCategory: 'attendance',
+    reasonsByStrategy: {
+      data_value: 'attendance_data_reaction',
+      market_maker: 'liquidity_response'
+    },
+    reasonPriority: {
+      attendance_data_reaction: 0,
+      liquidity_response: 1
+    }
+  }
+];
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -124,32 +146,27 @@ export class AgentEventQueueService {
   }
 
   private pickAgentsForBinding(binding: MarketEventBinding): QueueTarget[] {
-    if (binding.eventType !== 'attendance.monthly_summary_updated') {
+    const policy = EVENT_ROUTING_POLICIES.find((candidate) => candidate.eventType === binding.eventType);
+    if (!policy) {
       return [];
     }
 
     const agents = this.agents
       .listAgents()
-      .filter((agent) => agent.focusCategories.includes('attendance'));
+      .filter((agent) => agent.focusCategories.includes(policy.focusCategory));
 
     const selected: QueueTarget[] = [];
 
     for (const agent of agents) {
-      if (agent.strategy === 'data_value') {
-        selected.push({ agent, reason: 'attendance_data_reaction' });
-      } else if (agent.strategy === 'market_maker') {
-        selected.push({ agent, reason: 'liquidity_response' });
+      const reason = policy.reasonsByStrategy[agent.strategy];
+      if (reason) {
+        selected.push({ agent, reason });
       }
     }
 
-    const reasonPriority = new Map<string, number>([
-      ['attendance_data_reaction', 0],
-      ['liquidity_response', 1]
-    ]);
-
     return selected.sort((left, right) => {
-        const leftPriority = reasonPriority.get(left.reason) ?? Number.MAX_SAFE_INTEGER;
-        const rightPriority = reasonPriority.get(right.reason) ?? Number.MAX_SAFE_INTEGER;
+        const leftPriority = policy.reasonPriority[left.reason] ?? Number.MAX_SAFE_INTEGER;
+        const rightPriority = policy.reasonPriority[right.reason] ?? Number.MAX_SAFE_INTEGER;
         if (leftPriority !== rightPriority) {
           return leftPriority - rightPriority;
         }

@@ -277,6 +277,83 @@ describe('MarketBindingService', () => {
     db.close();
   });
 
+  test('allows persisted suggestions to be confirmed as active bindings later', () => {
+    const { db, market, bindings } = setup();
+    const input = {
+      marketId: market.id,
+      eventType: 'attendance.monthly_summary_updated',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-06',
+      metricKeys: ['restDaysSoFar'],
+      suggestedBy: 'rule'
+    };
+
+    const suggested = bindings.createBinding({
+      ...input,
+      status: 'suggested'
+    });
+    const active = bindings.createBinding({
+      ...input,
+      status: 'active',
+      confirmedBy: 'admin'
+    });
+
+    expect(suggested.status).toBe('suggested');
+    expect(active.status).toBe('active');
+    expect(bindings.findMatchingBindings({
+      id: 'wev_test',
+      type: 'attendance.monthly_summary_updated',
+      source: 'manual_admin',
+      sourceRef: null,
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-06',
+      effectiveAt: '2026-06-18T12:00:00.000Z',
+      observedAt: '2026-06-18T12:05:00.000Z',
+      confidence: 'high',
+      summary: '王哥 2026-06 已休息 6 天。',
+      payload: { restDaysSoFar: 6 },
+      dedupeKey: 'test:event',
+      createdAt: '2026-06-18T12:05:00.000Z'
+    })).toEqual([active]);
+
+    db.close();
+  });
+
+  test('database check rejects active bindings without confirmation', () => {
+    const { db, market } = setup();
+    const insert = db.prepare(
+      `INSERT INTO market_event_bindings (
+        id, market_id, event_type, subject_type, subject_id, subject_label,
+        period, metric_keys_json, status, suggested_by, confirmed_by,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    expect(() =>
+      insert.run(
+        'meb_active_without_confirmation',
+        market.id,
+        'attendance.monthly_summary_updated',
+        'person',
+        'wang-ge',
+        '王哥',
+        '2026-06',
+        '["restDaysSoFar"]',
+        'active',
+        'rule',
+        null,
+        '2026-06-18T12:00:00.000Z',
+        '2026-06-18T12:00:00.000Z'
+      )
+    ).toThrow(/CHECK|constraint/i);
+
+    db.close();
+  });
+
   test('rejects non-string metric keys with validation error', () => {
     const { db, market, bindings } = setup();
 

@@ -167,16 +167,18 @@ export function createSchema(db: Db): void {
       suggested_by TEXT NOT NULL,
       confirmed_by TEXT,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      CHECK (status != 'active' OR confirmed_by IS NOT NULL)
     );
 
-    CREATE UNIQUE INDEX IF NOT EXISTS market_event_bindings_logical_identity_idx
+    CREATE UNIQUE INDEX IF NOT EXISTS market_event_bindings_active_identity_idx
     ON market_event_bindings (
       market_id,
       event_type,
       subject_type,
       subject_id,
       COALESCE(period, '')
-    );
+    )
+    WHERE status = 'active';
   `);
 }

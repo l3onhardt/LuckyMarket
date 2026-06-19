@@ -55,7 +55,6 @@ interface ExistingBindingIdentityRow {
 }
 
 interface AttendanceSuggestionRule {
-  name: string;
   matches: (market: { title: string; category: string; settlementSource: string }) => boolean;
   build: (market: { closeTime: string }) => MarketBindingSuggestion;
 }
@@ -142,7 +141,6 @@ function monthFromCloseTime(closeTime: string): string | null {
 
 const ATTENDANCE_SUGGESTION_RULES: readonly AttendanceSuggestionRule[] = [
   {
-    name: 'wang-ge-monthly-rest-days',
     matches: (market) =>
       market.category === 'attendance' &&
       /(?:王哥|wang\s*ge)/i.test(market.title) &&
@@ -265,6 +263,10 @@ export class MarketBindingService {
   }
 
   private assertNoDuplicateBinding(input: CreateMarketBindingInput): void {
+    if (input.status !== 'active') {
+      return;
+    }
+
     const existing = this.db
       .prepare(
         `SELECT id
@@ -273,6 +275,7 @@ export class MarketBindingService {
            AND event_type = ?
            AND subject_type = ?
            AND subject_id = ?
+           AND status = 'active'
            AND ((period IS NULL AND ? IS NULL) OR period = ?)
          LIMIT 1`
       )
@@ -296,7 +299,7 @@ export class MarketBindingService {
   private isLogicalIdentityUniqueConstraint(error: unknown): boolean {
     return (
       error instanceof Error &&
-      error.message.includes('market_event_bindings_logical_identity_idx')
+      error.message.includes('market_event_bindings_active_identity_idx')
     );
   }
 

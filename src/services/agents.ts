@@ -63,6 +63,14 @@ export interface WakeAgentResult {
   signal?: string;
 }
 
+export interface AgentWakeContext {
+  worldEventId?: string;
+  marketId?: string;
+  bindingId?: string;
+  queueItemId?: string;
+  reason?: string;
+}
+
 interface AgentProfileRow {
   account_id: string;
   role: string;
@@ -255,16 +263,17 @@ export class AgentService {
     };
   }
 
-  wakeAgent(accountId: string): WakeAgentResult {
+  wakeAgent(accountId: string, wakeContext?: AgentWakeContext): WakeAgentResult {
     return inTransaction(this.db, () => {
       const context = this.buildContextPacket(accountId);
       const startedAt = nowIso();
       const agent = resetDailyActionsIfNeeded(context.agent, startedAt);
       const dailyContext: AgentContextPacket = { ...context, agent };
+      const contextPacket = wakeContext ? { ...dailyContext, wakeContext } : dailyContext;
 
       if (dailyContext.agent.actionsUsedToday >= dailyContext.agent.dailyActionBudget) {
         const result = this.recordWakeResult(
-          dailyContext,
+          contextPacket,
           startedAt,
           'skipped',
           'agent_skip',
@@ -279,7 +288,7 @@ export class AgentService {
       const market = dailyContext.openMarkets[0];
       if (!market) {
         return this.recordWakeResult(
-          dailyContext,
+          contextPacket,
           startedAt,
           'signaled',
           'agent_signal',
@@ -296,7 +305,7 @@ export class AgentService {
         const trade = this.placeBoundedBuy(dailyContext, market, decision.outcome);
         if (trade) {
           const result = this.recordWakeResult(
-            dailyContext,
+            contextPacket,
             startedAt,
             'acted',
             'agent_trade',
@@ -317,7 +326,7 @@ export class AgentService {
 
       const signal = edge < 3 ? 'No sufficient pricing edge' : 'No affordable positive-integer trade';
       const result = this.recordWakeResult(
-        dailyContext,
+        contextPacket,
         startedAt,
         'signaled',
         'agent_signal',
@@ -414,7 +423,7 @@ export class AgentService {
   }
 
   private recordWakeResult(
-    context: AgentContextPacket,
+    context: AgentContextPacket | (AgentContextPacket & { wakeContext?: AgentWakeContext }),
     startedAt: string,
     status: WakeAgentResult['status'],
     actionType: AgentActionType,

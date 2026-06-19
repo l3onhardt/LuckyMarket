@@ -180,5 +180,19 @@ export function createSchema(db: Db): void {
       COALESCE(period, '')
     )
     WHERE status = 'active';
+
+    CREATE TABLE IF NOT EXISTS agent_event_queue (
+      id TEXT PRIMARY KEY,
+      world_event_id TEXT NOT NULL REFERENCES world_events(id),
+      market_id TEXT NOT NULL REFERENCES markets(id),
+      binding_id TEXT NOT NULL REFERENCES market_event_bindings(id),
+      account_id TEXT NOT NULL REFERENCES accounts(id),
+      reason TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('queued', 'processed', 'failed')),
+      created_at TEXT NOT NULL,
+      processed_at TEXT,
+      wake_run_id TEXT REFERENCES agent_wake_runs(id),
+      UNIQUE (world_event_id, market_id, account_id, reason)
+    );
   `);
 }

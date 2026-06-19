@@ -43,6 +43,7 @@ export interface Market {
 export type WorldEventConfidence = 'low' | 'medium' | 'high';
 
 export type MarketEventBindingStatus = 'suggested' | 'active' | 'disabled';
+export type AgentEventQueueStatus = 'queued' | 'processed' | 'failed';
 
 export interface WorldEvent {
   id: string;
@@ -76,4 +77,17 @@ export interface MarketEventBinding {
   confirmedBy: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AgentEventQueueItem {
+  id: string;
+  worldEventId: string;
+  marketId: string;
+  bindingId: string;
+  accountId: string;
+  reason: string;
+  status: AgentEventQueueStatus;
+  createdAt: string;
+  processedAt: string | null;
+  wakeRunId: string | null;
 }

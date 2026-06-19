@@ -9,6 +9,8 @@ export interface BuildServerOptions {
   db: Db;
   schedulerEnabled: boolean;
   maxAgentsPerTick: number;
+  feishuAppId?: string | null;
+  feishuAppSecret?: string | null;
 }
 
 function hasFastifyValidation(error: unknown): error is { validation: unknown; message: string } {

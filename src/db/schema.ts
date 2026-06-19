@@ -195,5 +195,17 @@ export function createSchema(db: Db): void {
       wake_run_id TEXT REFERENCES agent_wake_runs(id),
       UNIQUE (world_event_id, market_id, account_id, reason)
     );
+
+    CREATE TABLE IF NOT EXISTS integration_sync_runs (
+      id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      finished_at TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('success', 'failed')),
+      scanned_subjects INTEGER NOT NULL,
+      created_events INTEGER NOT NULL,
+      queued_items INTEGER NOT NULL,
+      error_message TEXT
+    );
   `);
 }

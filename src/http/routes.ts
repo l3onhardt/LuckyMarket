@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { seedDemoData } from '../db/seed.js';
 import type { Db } from '../db/connection.js';
+import { FeishuAttendanceAdapter } from '../integrations/feishu/attendance.js';
+import { FeishuHttpAttendanceClient } from '../integrations/feishu/client.js';
 import { AgentService } from '../services/agents.js';
 import { AgentEventQueueService } from '../services/agentEventQueue.js';
 import { LedgerService } from '../services/ledger.js';
@@ -14,6 +16,8 @@ export interface RegisterRoutesOptions {
   db: Db;
   schedulerEnabled: boolean;
   maxAgentsPerTick: number;
+  feishuAppId?: string | null;
+  feishuAppSecret?: string | null;
 }
 
 const accountBodySchema = z.object({
@@ -106,12 +110,20 @@ function makeServices(options: RegisterRoutesOptions) {
   const worldEvents = new WorldEventService(options.db);
   const bindings = new MarketBindingService(options.db, markets);
   const eventQueue = new AgentEventQueueService(options.db, agents, bindings);
+  const feishuAttendance = new FeishuAttendanceAdapter(
+    options.db,
+    worldEvents,
+    bindings,
+    eventQueue,
+    new FeishuHttpAttendanceClient(options.feishuAppId ?? null, options.feishuAppSecret ?? null)
+  );
 
-  return { ledger, markets, agents, scheduler, worldEvents, bindings, eventQueue };
+  return { ledger, markets, agents, scheduler, worldEvents, bindings, eventQueue, feishuAttendance };
 }
 
 export async function registerRoutes(server: FastifyInstance, options: RegisterRoutesOptions): Promise<void> {
-  const { ledger, markets, agents, scheduler, worldEvents, bindings, eventQueue } = makeServices(options);
+  const { ledger, markets, agents, scheduler, worldEvents, bindings, eventQueue, feishuAttendance } =
+    makeServices(options);
 
   server.get('/health', async () => ({ ok: true, service: 'luckymarket' }));
 
@@ -237,6 +249,10 @@ export async function registerRoutes(server: FastifyInstance, options: RegisterR
     const body = eventQueueTickBodySchema.parse(request.body);
     return { result: eventQueue.tick(body?.limit) };
   });
+
+  server.post('/integrations/feishu/attendance/sync', async () => ({
+    result: await feishuAttendance.syncMonthlySummaries()
+  }));
 
   server.post('/seed/demo', async () => ({ result: seedDemoData(options.db) }));
 }

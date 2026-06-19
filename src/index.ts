@@ -37,7 +37,9 @@ async function main(): Promise<void> {
   const server = await buildServer({
     db,
     schedulerEnabled: config.schedulerEnabled,
-    maxAgentsPerTick: config.maxAgentsPerTick
+    maxAgentsPerTick: config.maxAgentsPerTick,
+    feishuAppId: config.feishuAppId,
+    feishuAppSecret: config.feishuAppSecret
   });
 
   const address = await server.listen({ port: config.port, host: '0.0.0.0' });

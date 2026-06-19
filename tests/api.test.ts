@@ -271,4 +271,45 @@ describe('HTTP API', () => {
       db.close();
     }
   });
+
+  test('feishu attendance sync endpoint records failed sync without credentials', async () => {
+    const db = createTestDb();
+    await seedDemoDataForTest(db);
+    const server = await buildServer({ db, schedulerEnabled: false, maxAgentsPerTick: 2 });
+    try {
+      const market = (await server.inject({ method: 'GET', url: '/markets' }))
+        .json<{ markets: Array<{ id: string; title: string }> }>()
+        .markets.find((item) => item.title.includes('王哥'))!;
+      await server.inject({
+        method: 'POST',
+        url: `/markets/${market.id}/bindings`,
+        payload: {
+          eventType: 'attendance.monthly_summary_updated',
+          subjectType: 'person',
+          subjectId: 'wang-ge',
+          subjectLabel: '王哥',
+          period: '2026-06',
+          metricKeys: ['restDaysSoFar'],
+          status: 'active',
+          suggestedBy: 'rule',
+          confirmedBy: 'admin'
+        }
+      });
+
+      const response = await server.inject({ method: 'POST', url: '/integrations/feishu/attendance/sync' });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json<{ result: { status: string; scannedSubjects: number; errorMessage: string } }>().result).toMatchObject({
+        status: 'failed',
+        scannedSubjects: 1,
+        errorMessage: 'FEISHU_APP_ID and FEISHU_APP_SECRET are required for Feishu sync'
+      });
+      expect(db.prepare("SELECT status FROM integration_sync_runs WHERE provider = 'feishu_attendance'").get()).toEqual({
+        status: 'failed'
+      });
+    } finally {
+      await server.close();
+      db.close();
+    }
+  });
 });

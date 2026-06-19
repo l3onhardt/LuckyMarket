@@ -26,6 +26,7 @@ interface AgentEventQueueRow {
   status: AgentEventQueueStatus;
   created_at: string;
   processed_at: string | null;
+  failure_reason: string | null;
   wake_run_id: string | null;
 }
 
@@ -49,6 +50,7 @@ function mapQueueItem(row: AgentEventQueueRow): AgentEventQueueItem {
     status: row.status,
     createdAt: row.created_at,
     processedAt: row.processed_at,
+    failureReason: row.failure_reason,
     wakeRunId: row.wake_run_id
   };
 }
@@ -108,8 +110,8 @@ export class AgentEventQueueService {
         });
         this.markProcessed(item.id, wake.wakeRunId);
         processedQueueItems.push(item.id);
-      } catch {
-        this.markFailed(item.id);
+      } catch (error) {
+        this.markFailed(item.id, error instanceof Error ? error.message : 'Unknown queue processing error');
         failedQueueItems.push(item.id);
       }
     }
@@ -141,9 +143,7 @@ export class AgentEventQueueService {
       ['liquidity_response', 1]
     ]);
 
-    return selected
-      .filter((target) => target.agent.focusCategories.includes('attendance') && binding.marketId)
-      .sort((left, right) => {
+    return selected.sort((left, right) => {
         const leftPriority = reasonPriority.get(left.reason) ?? Number.MAX_SAFE_INTEGER;
         const rightPriority = reasonPriority.get(right.reason) ?? Number.MAX_SAFE_INTEGER;
         if (leftPriority !== rightPriority) {
@@ -166,8 +166,8 @@ export class AgentEventQueueService {
       .prepare(
         `INSERT OR IGNORE INTO agent_event_queue (
           id, world_event_id, market_id, binding_id, account_id, reason,
-          status, created_at, processed_at, wake_run_id
-        ) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, NULL, NULL)`
+          status, created_at, processed_at, failure_reason, wake_run_id
+        ) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, NULL, NULL, NULL)`
       )
       .run(id, event.id, binding.marketId, binding.id, accountId, reason, createdAt);
 
@@ -185,6 +185,7 @@ export class AgentEventQueueService {
       status: 'queued',
       createdAt,
       processedAt: null,
+      failureReason: null,
       wakeRunId: null
     };
   }
@@ -201,15 +202,16 @@ export class AgentEventQueueService {
       .run(nowIso(), wakeRunId, queueItemId);
   }
 
-  private markFailed(queueItemId: string): void {
+  private markFailed(queueItemId: string, failureReason: string): void {
     this.db
       .prepare(
         `UPDATE agent_event_queue
          SET status = 'failed',
-             processed_at = ?
+             processed_at = ?,
+             failure_reason = ?
          WHERE id = ?`
       )
-      .run(nowIso(), queueItemId);
+      .run(nowIso(), failureReason, queueItemId);
   }
 
   private countQueued(): number {

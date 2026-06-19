@@ -191,6 +191,7 @@ export function createSchema(db: Db): void {
       status TEXT NOT NULL CHECK (status IN ('queued', 'processed', 'failed')),
       created_at TEXT NOT NULL,
       processed_at TEXT,
+      failure_reason TEXT,
       wake_run_id TEXT REFERENCES agent_wake_runs(id),
       UNIQUE (world_event_id, market_id, account_id, reason)
     );

@@ -285,7 +285,9 @@ export class AgentService {
         return { ...result, reason: 'daily_action_budget_exhausted' };
       }
 
-      const market = dailyContext.openMarkets[0];
+      const market = wakeContext?.marketId
+        ? dailyContext.openMarkets.find((openMarket) => openMarket.id === wakeContext.marketId)
+        : dailyContext.openMarkets[0];
       if (!market) {
         return this.recordWakeResult(
           contextPacket,

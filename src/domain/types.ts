@@ -89,5 +89,6 @@ export interface AgentEventQueueItem {
   status: AgentEventQueueStatus;
   createdAt: string;
   processedAt: string | null;
+  failureReason: string | null;
   wakeRunId: string | null;
 }

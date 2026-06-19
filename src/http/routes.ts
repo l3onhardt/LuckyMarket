@@ -90,6 +90,14 @@ const eventQueueTickBodySchema = z
   })
   .optional();
 
+const worldEventsQuerySchema = z.object({
+  type: z.string().min(1).optional(),
+  source: z.string().min(1).optional(),
+  subjectId: z.string().min(1).optional(),
+  period: z.string().min(1).optional(),
+  limit: z.coerce.number().int().positive().max(500).optional()
+});
+
 function makeServices(options: RegisterRoutesOptions) {
   const ledger = new LedgerService(options.db);
   const markets = new MarketService(options.db, ledger);
@@ -191,21 +199,22 @@ export async function registerRoutes(server: FastifyInstance, options: RegisterR
   });
 
   server.get('/world-events', async (request) => {
-    const query = request.query as { type?: string; source?: string; subjectId?: string; period?: string; limit?: string };
+    const query = worldEventsQuerySchema.parse(request.query);
     return {
       events: worldEvents.listEvents({
         type: query.type,
         source: query.source,
         subjectId: query.subjectId,
         period: query.period,
-        limit: query.limit ? Number(query.limit) : undefined
+        limit: query.limit
       })
     };
   });
 
-  server.get<{ Params: { id: string } }>('/markets/:id/world-events', async (request) => ({
-    events: worldEvents.listEventsForMarket(request.params.id)
-  }));
+  server.get<{ Params: { id: string } }>('/markets/:id/world-events', async (request) => {
+    markets.getMarket(request.params.id);
+    return { events: worldEvents.listEventsForMarket(request.params.id) };
+  });
 
   server.post<{ Params: { id: string } }>('/markets/:id/bindings/suggest', async (request) => ({
     suggestions: bindings.suggestBindings(request.params.id)

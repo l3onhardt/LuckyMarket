@@ -241,4 +241,34 @@ describe('HTTP API', () => {
       db.close();
     }
   });
+
+  test('event API rejects malformed limit query without internal errors', async () => {
+    const db = createTestDb();
+    await seedDemoDataForTest(db);
+    const server = await buildServer({ db, schedulerEnabled: false, maxAgentsPerTick: 2 });
+    try {
+      const response = await server.inject({ method: 'GET', url: '/world-events?limit=not-a-number' });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json<{ error: { code: string } }>().error.code).toBe('VALIDATION_ERROR');
+    } finally {
+      await server.close();
+      db.close();
+    }
+  });
+
+  test('market world events endpoint rejects unknown market ids', async () => {
+    const db = createTestDb();
+    await seedDemoDataForTest(db);
+    const server = await buildServer({ db, schedulerEnabled: false, maxAgentsPerTick: 2 });
+    try {
+      const response = await server.inject({ method: 'GET', url: '/markets/mkt_missing/world-events' });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json<{ error: { code: string } }>().error.code).toBe('NOT_FOUND');
+    } finally {
+      await server.close();
+      db.close();
+    }
+  });
 });

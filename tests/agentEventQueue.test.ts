@@ -113,6 +113,44 @@ describe('AgentEventQueueService', () => {
     db.close();
   });
 
+  test('does not route unsupported event types to attendance agents', () => {
+    const { db, market, queue } = setup();
+    const ledger = new LedgerService(db);
+    const markets = new MarketService(db, ledger);
+    const bindings = new MarketBindingService(db, markets);
+    const worldEvents = new WorldEventService(db);
+    bindings.createBinding({
+      marketId: market.id,
+      eventType: 'weather.daily_summary_updated',
+      subjectType: 'city',
+      subjectId: 'shenzhen',
+      subjectLabel: '深圳',
+      period: '2026-06',
+      metricKeys: ['rainHours'],
+      status: 'active',
+      suggestedBy: 'manual',
+      confirmedBy: 'admin'
+    });
+    const event = worldEvents.createEvent({
+      type: 'weather.daily_summary_updated',
+      source: 'manual_admin',
+      subjectType: 'city',
+      subjectId: 'shenzhen',
+      subjectLabel: '深圳',
+      period: '2026-06',
+      effectiveAt: '2026-06-18T12:00:00.000Z',
+      observedAt: '2026-06-18T12:05:00.000Z',
+      confidence: 'medium',
+      summary: '深圳今日降雨 2 小时。',
+      payload: { rainHours: 2 },
+      dedupeKey: 'manual:weather:shenzhen:2026-06-18'
+    });
+
+    expect(queue.enqueueForEvent(event)).toEqual([]);
+
+    db.close();
+  });
+
   test('event queue tick wakes bounded queued agents and marks items processed', () => {
     const { db, market, otherMarket, event, queue } = setup();
     queue.enqueueForEvent(event);

@@ -124,6 +124,10 @@ export class AgentEventQueueService {
   }
 
   private pickAgentsForBinding(binding: MarketEventBinding): QueueTarget[] {
+    if (binding.eventType !== 'attendance.monthly_summary_updated') {
+      return [];
+    }
+
     const agents = this.agents
       .listAgents()
       .filter((agent) => agent.focusCategories.includes('attendance'));

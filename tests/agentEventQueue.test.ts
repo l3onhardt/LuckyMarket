@@ -107,6 +107,7 @@ describe('AgentEventQueueService', () => {
 
     expect(items).toHaveLength(2);
     expect(items.map((item) => item.reason)).toEqual(['attendance_data_reaction', 'liquidity_response']);
+    expect(queue.listQueued(2).map((item) => item.reason)).toEqual(['attendance_data_reaction', 'liquidity_response']);
     expect(items.every((item) => item.marketId === market.id)).toBe(true);
     expect(queue.enqueueForEvent(event)).toEqual([]);
 

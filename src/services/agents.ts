@@ -1,7 +1,7 @@
 import type { Db } from '../db/connection.js';
 import { inTransaction } from '../db/connection.js';
 import { AppError, notFound } from '../domain/errors.js';
-import type { Account, MarketOutcome } from '../domain/types.js';
+import type { Account, MarketOutcome, WorldEvent } from '../domain/types.js';
 import { newId } from './ids.js';
 import type { LedgerService } from './ledger.js';
 import type { MarketDetail, PositionRecord, TradeQuote, TradeRecord } from './markets.js';
@@ -51,6 +51,7 @@ export interface AgentContextPacket {
   balance: number;
   openMarkets: MarketDetail[];
   positions: PositionRecord[];
+  matchedWorldEvents: WorldEvent[];
 }
 
 export interface WakeAgentResult {
@@ -92,6 +93,24 @@ interface AgentMemoryRow {
   updated_at: string;
 }
 
+interface WorldEventRow {
+  id: string;
+  type: string;
+  source: string;
+  source_ref: string | null;
+  subject_type: string;
+  subject_id: string;
+  subject_label: string;
+  period: string | null;
+  effective_at: string;
+  observed_at: string;
+  confidence: WorldEvent['confidence'];
+  summary: string;
+  payload_json: string;
+  dedupe_key: string;
+  created_at: string;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -130,6 +149,26 @@ function mapMemory(row: AgentMemoryRow): AgentMemory {
     accountId: row.account_id,
     summary: row.summary,
     updatedAt: row.updated_at
+  };
+}
+
+function mapWorldEvent(row: WorldEventRow): WorldEvent {
+  return {
+    id: row.id,
+    type: row.type,
+    source: row.source,
+    sourceRef: row.source_ref,
+    subjectType: row.subject_type,
+    subjectId: row.subject_id,
+    subjectLabel: row.subject_label,
+    period: row.period,
+    effectiveAt: row.effective_at,
+    observedAt: row.observed_at,
+    confidence: row.confidence,
+    summary: row.summary,
+    payload: JSON.parse(row.payload_json) as Record<string, unknown>,
+    dedupeKey: row.dedupe_key,
+    createdAt: row.created_at
   };
 }
 
@@ -240,7 +279,7 @@ export class AgentService {
     return rows.map(mapProfile);
   }
 
-  buildContextPacket(accountId: string): AgentContextPacket {
+  buildContextPacket(accountId: string, wakeContext: AgentWakeContext = {}): AgentContextPacket {
     const agent = this.getAgent(accountId);
     const memory = this.getMemory(accountId);
     const focusCategories = new Set(agent.focusCategories);
@@ -259,13 +298,14 @@ export class AgentService {
       },
       balance: this.ledger.getBalance(accountId),
       openMarkets,
-      positions: this.markets.getPositions(accountId)
+      positions: this.markets.getPositions(accountId),
+      matchedWorldEvents: wakeContext.worldEventId ? [this.getWorldEvent(wakeContext.worldEventId)] : []
     };
   }
 
   wakeAgent(accountId: string, wakeContext?: AgentWakeContext): WakeAgentResult {
     return inTransaction(this.db, () => {
-      const context = this.buildContextPacket(accountId);
+      const context = this.buildContextPacket(accountId, wakeContext);
       const startedAt = nowIso();
       const agent = resetDailyActionsIfNeeded(context.agent, startedAt);
       const dailyContext: AgentContextPacket = { ...context, agent };
@@ -301,24 +341,30 @@ export class AgentService {
         );
       }
 
-      const decision = this.chooseOutcome(dailyContext.agent, market);
+      const decision = this.chooseOutcome(dailyContext, market);
       const edge = decision.fairProbability - decision.price;
       if (edge >= 3) {
         const trade = this.placeBoundedBuy(dailyContext, market, decision.outcome);
         if (trade) {
+          const matchedWorldEvent = dailyContext.matchedWorldEvents[0];
           const result = this.recordWakeResult(
             contextPacket,
             startedAt,
             'acted',
             'agent_trade',
             market.id,
-            `Agent bought ${trade.shares} shares`,
+            matchedWorldEvent
+              ? `Agent bought ${trade.shares} shares after event: ${matchedWorldEvent.summary}`
+              : `Agent bought ${trade.shares} shares`,
             {
               tradeId: trade.id,
               outcomeId: trade.outcomeId,
               shares: trade.shares,
               pointsAmount: trade.pointsAmount,
-              edge
+              edge,
+              ...(matchedWorldEvent
+                ? { worldEventId: matchedWorldEvent.id, worldEventSummary: matchedWorldEvent.summary }
+                : {})
             },
             true
           );
@@ -358,15 +404,84 @@ export class AgentService {
     return mapMemory(row);
   }
 
+  private getWorldEvent(eventId: string): WorldEvent {
+    const row = this.db.prepare('SELECT * FROM world_events WHERE id = ?').get(eventId) as WorldEventRow | undefined;
+    if (!row) {
+      throw new AppError('NOT_FOUND', `World event not found: ${eventId}`, 404);
+    }
+
+    return mapWorldEvent(row);
+  }
+
+  private latestAttendanceEventForMarket(marketId: string): WorldEvent | null {
+    const row = this.db
+      .prepare(
+        `SELECT world_events.*
+         FROM world_events
+         INNER JOIN market_event_bindings ON
+           market_event_bindings.event_type = world_events.type
+           AND market_event_bindings.subject_type = world_events.subject_type
+           AND market_event_bindings.subject_id = world_events.subject_id
+           AND (market_event_bindings.period IS NULL OR market_event_bindings.period = world_events.period)
+         WHERE market_event_bindings.market_id = ?
+           AND market_event_bindings.status = 'active'
+           AND world_events.type = 'attendance.monthly_summary_updated'
+         ORDER BY world_events.observed_at DESC, world_events.id DESC
+         LIMIT 1`
+      )
+      .get(marketId) as WorldEventRow | undefined;
+
+    return row ? mapWorldEvent(row) : null;
+  }
+
+  private pickOutcomeForRestDays(
+    pricedOutcomes: Array<{ outcome: MarketOutcome; price: number }>,
+    restDays: number
+  ): { outcome: MarketOutcome; price: number } | null {
+    if (!Number.isFinite(restDays)) {
+      return null;
+    }
+
+    return (
+      pricedOutcomes.find((item) => {
+        const range = /^(\d+)-(\d+)天$/.exec(item.outcome.label);
+        if (range) {
+          return restDays >= Number(range[1]) && restDays <= Number(range[2]);
+        }
+
+        const plus = /^(\d+)天以上$/.exec(item.outcome.label);
+        if (plus) {
+          return restDays >= Number(plus[1]);
+        }
+
+        return false;
+      }) ?? null
+    );
+  }
+
   private chooseOutcome(
-    agent: AgentProfile,
+    context: AgentContextPacket,
     market: MarketDetail
   ): { outcome: MarketOutcome; price: number; fairProbability: number } {
+    const agent = context.agent;
     const pricedOutcomes = market.outcomes.map((outcome) => ({
       outcome,
       price: market.prices.find((item) => item.outcomeId === outcome.id)?.price ?? 0
     }));
 
+    const attendanceEvent =
+      agent.strategy === 'data_value' && market.category === 'attendance'
+        ? (context.matchedWorldEvents.find((event) => event.type === 'attendance.monthly_summary_updated') ??
+          this.latestAttendanceEventForMarket(market.id))
+        : null;
+    if (attendanceEvent) {
+      const restDays = Number(attendanceEvent.payload.restDaysSoFar);
+      const bucket = this.pickOutcomeForRestDays(pricedOutcomes, restDays);
+      if (bucket) {
+        const fairProbability = restDays >= 6 ? 92 : Math.min(88, bucket.price + 35);
+        return { ...bucket, fairProbability };
+      }
+    }
     if (agent.strategy === 'data_value' && market.category === 'attendance' && pricedOutcomes[1]) {
       return { ...pricedOutcomes[1], fairProbability: 58 };
     }

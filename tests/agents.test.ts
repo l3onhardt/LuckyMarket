@@ -3,6 +3,7 @@ import { AgentService } from '../src/services/agents.js';
 import { LedgerService } from '../src/services/ledger.js';
 import { MarketService } from '../src/services/markets.js';
 import { SchedulerService } from '../src/services/scheduler.js';
+import { WorldEventService } from '../src/services/worldEvents.js';
 import { createTestDb } from './helpers.js';
 
 function futureIso(minutes = 60): string {
@@ -130,6 +131,55 @@ describe('AgentService', () => {
     expect(wakeRuns).toHaveLength(1);
     expect(actions).toHaveLength(1);
     expect(activities).toHaveLength(1);
+  });
+
+  test('builds context packets with matched world events for event-triggered wakes', () => {
+    const { db, ledger, agents } = setupServices();
+    const worldEvents = new WorldEventService(db);
+    const account = ledger.createAccount({
+      kind: 'agent',
+      handle: 'context-attendance-agent',
+      displayName: 'Context Attendance Agent',
+      initialPoints: 120
+    });
+    agents.createAgentProfile({
+      accountId: account.id,
+      role: 'Attendance signal agent',
+      strategy: 'data_value',
+      focusCategories: ['attendance'],
+      riskAppetite: 0.5,
+      maxTradePoints: 30,
+      maxPositionShares: 2,
+      wakeIntervalMinutes: 45,
+      dailyActionBudget: 3,
+      nextWakeAt: '2026-06-15T08:00:00.000Z',
+      memorySummary: 'Reads event context before trading.'
+    });
+    const event = worldEvents.createEvent({
+      type: 'attendance.monthly_summary_updated',
+      source: 'manual_admin',
+      subjectType: 'person',
+      subjectId: 'wang-ge',
+      subjectLabel: '王哥',
+      period: '2026-06',
+      effectiveAt: '2026-06-18T12:00:00.000Z',
+      observedAt: '2026-06-18T12:05:00.000Z',
+      confidence: 'high',
+      summary: '王哥 2026-06 已休息 6 天。',
+      payload: { restDaysSoFar: 6 },
+      dedupeKey: 'manual:wang-ge:context:6'
+    });
+
+    const context = agents.buildContextPacket(account.id, { worldEventId: event.id });
+
+    expect(context.matchedWorldEvents).toEqual([
+      expect.objectContaining({
+        id: event.id,
+        summary: '王哥 2026-06 已休息 6 天。',
+        payload: { restDaysSoFar: 6 }
+      })
+    ]);
+    db.close();
   });
 
   test('does not wake an agent beyond daily action budget', () => {

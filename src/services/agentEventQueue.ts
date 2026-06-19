@@ -108,7 +108,13 @@ export class AgentEventQueueService {
       .prepare(
         `SELECT * FROM agent_event_queue
          WHERE status = 'queued'
-         ORDER BY created_at ASC, id ASC
+         ORDER BY created_at ASC,
+           CASE reason
+             WHEN 'attendance_data_reaction' THEN 0
+             WHEN 'liquidity_response' THEN 1
+             ELSE 99
+           END ASC,
+           id ASC
          LIMIT ?`
       )
       .all(cappedLimit) as AgentEventQueueRow[];

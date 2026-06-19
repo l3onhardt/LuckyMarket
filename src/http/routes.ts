@@ -3,9 +3,12 @@ import { z } from 'zod';
 import { seedDemoData } from '../db/seed.js';
 import type { Db } from '../db/connection.js';
 import { AgentService } from '../services/agents.js';
+import { AgentEventQueueService } from '../services/agentEventQueue.js';
 import { LedgerService } from '../services/ledger.js';
+import { MarketBindingService } from '../services/marketBindings.js';
 import { MarketService } from '../services/markets.js';
 import { SchedulerService } from '../services/scheduler.js';
+import { WorldEventService } from '../services/worldEvents.js';
 
 export interface RegisterRoutesOptions {
   db: Db;
@@ -45,9 +48,45 @@ const settleBodySchema = z.object({
   winningOutcomeId: z.string().min(1)
 });
 
+const confidenceSchema = z.enum(['low', 'medium', 'high']);
+
+const worldEventBodySchema = z.object({
+  type: z.string().min(1),
+  source: z.string().min(1),
+  sourceRef: z.string().min(1).optional().nullable(),
+  subjectType: z.string().min(1),
+  subjectId: z.string().min(1),
+  subjectLabel: z.string().min(1),
+  period: z.string().min(1).optional().nullable(),
+  effectiveAt: z.string().datetime(),
+  observedAt: z.string().datetime(),
+  confidence: confidenceSchema,
+  summary: z.string().min(1),
+  payload: z.record(z.string(), z.unknown()),
+  dedupeKey: z.string().min(1)
+});
+
+const bindingBodySchema = z.object({
+  eventType: z.string().min(1),
+  subjectType: z.string().min(1),
+  subjectId: z.string().min(1),
+  subjectLabel: z.string().min(1),
+  period: z.string().min(1).optional().nullable(),
+  metricKeys: z.array(z.string().min(1)).min(1),
+  status: z.enum(['suggested', 'active', 'disabled']),
+  suggestedBy: z.string().min(1),
+  confirmedBy: z.string().min(1).optional().nullable()
+});
+
 const schedulerTickBodySchema = z
   .object({
     nowIso: z.string().datetime().optional()
+  })
+  .optional();
+
+const eventQueueTickBodySchema = z
+  .object({
+    limit: z.number().int().positive().max(20).optional()
   })
   .optional();
 
@@ -56,12 +95,15 @@ function makeServices(options: RegisterRoutesOptions) {
   const markets = new MarketService(options.db, ledger);
   const agents = new AgentService(options.db, ledger, markets);
   const scheduler = new SchedulerService(agents, { maxAgentsPerTick: options.maxAgentsPerTick });
+  const worldEvents = new WorldEventService(options.db);
+  const bindings = new MarketBindingService(options.db, markets);
+  const eventQueue = new AgentEventQueueService(options.db, agents, bindings);
 
-  return { ledger, markets, agents, scheduler };
+  return { ledger, markets, agents, scheduler, worldEvents, bindings, eventQueue };
 }
 
 export async function registerRoutes(server: FastifyInstance, options: RegisterRoutesOptions): Promise<void> {
-  const { ledger, markets, agents, scheduler } = makeServices(options);
+  const { ledger, markets, agents, scheduler, worldEvents, bindings, eventQueue } = makeServices(options);
 
   server.get('/health', async () => ({ ok: true, service: 'luckymarket' }));
 
@@ -139,6 +181,52 @@ export async function registerRoutes(server: FastifyInstance, options: RegisterR
   server.post('/scheduler/tick', async (request) => {
     const body = schedulerTickBodySchema.parse(request.body);
     return { result: scheduler.tick(body?.nowIso) };
+  });
+
+  server.post('/world-events', async (request) => {
+    const body = worldEventBodySchema.parse(request.body);
+    const event = worldEvents.createEvent(body);
+    const queuedItems = eventQueue.enqueueForEvent(event);
+    return { event, queuedItems };
+  });
+
+  server.get('/world-events', async (request) => {
+    const query = request.query as { type?: string; source?: string; subjectId?: string; period?: string; limit?: string };
+    return {
+      events: worldEvents.listEvents({
+        type: query.type,
+        source: query.source,
+        subjectId: query.subjectId,
+        period: query.period,
+        limit: query.limit ? Number(query.limit) : undefined
+      })
+    };
+  });
+
+  server.get<{ Params: { id: string } }>('/markets/:id/world-events', async (request) => ({
+    events: worldEvents.listEventsForMarket(request.params.id)
+  }));
+
+  server.post<{ Params: { id: string } }>('/markets/:id/bindings/suggest', async (request) => ({
+    suggestions: bindings.suggestBindings(request.params.id)
+  }));
+
+  server.post<{ Params: { id: string } }>('/markets/:id/bindings', async (request) => {
+    const body = bindingBodySchema.parse(request.body);
+    return { binding: bindings.createBinding({ marketId: request.params.id, ...body }) };
+  });
+
+  server.get<{ Params: { id: string } }>('/markets/:id/bindings', async (request) => ({
+    bindings: bindings.listBindingsForMarket(request.params.id)
+  }));
+
+  server.get('/agent-event-queue', async () => ({
+    items: eventQueue.listQueued()
+  }));
+
+  server.post('/scheduler/event-queue/tick', async (request) => {
+    const body = eventQueueTickBodySchema.parse(request.body);
+    return { result: eventQueue.tick(body?.limit) };
   });
 
   server.post('/seed/demo', async () => ({ result: seedDemoData(options.db) }));

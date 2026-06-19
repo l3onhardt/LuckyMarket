@@ -164,4 +164,81 @@ describe('HTTP API', () => {
       db.close();
     }
   });
+
+  test('creates world event, confirms binding, and processes event queue through API', async () => {
+    const db = createTestDb();
+    await seedDemoDataForTest(db);
+    const server = await buildServer({ db, schedulerEnabled: false, maxAgentsPerTick: 2 });
+    try {
+      const market = (await server.inject({ method: 'GET', url: '/markets' }))
+        .json<{ markets: Array<{ id: string; title: string }> }>()
+        .markets.find((item) => item.title.includes('王哥'))!;
+
+      const suggestions = await server.inject({ method: 'POST', url: `/markets/${market.id}/bindings/suggest` });
+      expect(suggestions.statusCode).toBe(200);
+      const suggestion = suggestions
+        .json<{ suggestions: Array<{ eventType: string; subjectId: string }> }>()
+        .suggestions[0];
+      expect(suggestion).toMatchObject({ eventType: 'attendance.monthly_summary_updated', subjectId: 'wang-ge' });
+
+      const binding = await server.inject({
+        method: 'POST',
+        url: `/markets/${market.id}/bindings`,
+        payload: {
+          eventType: 'attendance.monthly_summary_updated',
+          subjectType: 'person',
+          subjectId: 'wang-ge',
+          subjectLabel: '王哥',
+          period: '2026-06',
+          metricKeys: ['restDaysSoFar'],
+          status: 'active',
+          suggestedBy: 'rule',
+          confirmedBy: 'admin'
+        }
+      });
+      expect(binding.statusCode).toBe(200);
+
+      const eventResponse = await server.inject({
+        method: 'POST',
+        url: '/world-events',
+        payload: {
+          type: 'attendance.monthly_summary_updated',
+          source: 'manual_admin',
+          subjectType: 'person',
+          subjectId: 'wang-ge',
+          subjectLabel: '王哥',
+          period: '2026-06',
+          effectiveAt: '2026-06-18T12:00:00.000Z',
+          observedAt: '2026-06-18T12:05:00.000Z',
+          confidence: 'high',
+          summary: '王哥 2026-06 已休息 6 天。',
+          payload: { restDaysSoFar: 6 },
+          dedupeKey: 'manual-api:wang-ge:6'
+        }
+      });
+      expect(eventResponse.statusCode).toBe(200);
+      expect(eventResponse.json<{ queuedItems: unknown[] }>().queuedItems.length).toBeGreaterThan(0);
+
+      const eventList = await server.inject({ method: 'GET', url: '/world-events?subjectId=wang-ge&period=2026-06' });
+      expect(eventList.statusCode).toBe(200);
+      expect(eventList.json<{ events: Array<{ subjectId: string; period: string }> }>().events).toEqual([
+        expect.objectContaining({ subjectId: 'wang-ge', period: '2026-06' })
+      ]);
+
+      const queueList = await server.inject({ method: 'GET', url: '/agent-event-queue' });
+      expect(queueList.statusCode).toBe(200);
+      expect(queueList.json<{ items: unknown[] }>().items.length).toBeGreaterThan(0);
+
+      const tick = await server.inject({ method: 'POST', url: '/scheduler/event-queue/tick', payload: { limit: 1 } });
+      expect(tick.statusCode).toBe(200);
+      expect(tick.json<{ result: { processedQueueItems: unknown[] } }>().result.processedQueueItems).toHaveLength(1);
+
+      const marketEvents = await server.inject({ method: 'GET', url: `/markets/${market.id}/world-events` });
+      expect(marketEvents.statusCode).toBe(200);
+      expect(marketEvents.json<{ events: Array<{ summary: string }> }>().events[0].summary).toContain('已休息 6 天');
+    } finally {
+      await server.close();
+      db.close();
+    }
+  });
 });

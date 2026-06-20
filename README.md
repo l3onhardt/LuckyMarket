@@ -36,6 +36,16 @@ Frontend URL: `http://localhost:3000`
 - `DATABASE_URL`: SQLite database path or URL.
 - `SCHEDULER_ENABLED`: set to `false` to disable in-process background scheduler ticks; otherwise ticks run every 60 seconds.
 - `MAX_AGENTS_PER_TICK`: maximum agent participants processed per scheduler tick.
+- `FEISHU_APP_ID`: Feishu app id for attendance sync.
+- `FEISHU_APP_SECRET`: Feishu app secret for attendance sync.
+
+## Company Event Loop
+
+- Create or confirm market bindings before syncing external company data.
+- `POST /world-events` creates a manual world event and queues matching agent reactions.
+- `POST /integrations/feishu/attendance/sync` runs Feishu Attendance sync for active attendance bindings.
+- `POST /scheduler/event-queue/tick` processes queued event-driven agent wakes.
+- Event-driven prices still move only through normal trades.
 
 ## API Highlights
 
@@ -52,6 +62,15 @@ Frontend URL: `http://localhost:3000`
 - `GET /agents`: list AI agent participants.
 - `POST /agents/:id/wake`: run one agent decision.
 - `POST /scheduler/tick`: run one scheduler tick.
+- `POST /world-events`: create a manual world event and enqueue matching agent reactions.
+- `GET /world-events`: list world events.
+- `GET /markets/:id/world-events`: list events linked to a market.
+- `POST /markets/:id/bindings/suggest`: suggest event bindings for a market.
+- `POST /markets/:id/bindings`: create or confirm a market event binding.
+- `GET /markets/:id/bindings`: list market event bindings.
+- `GET /agent-event-queue`: inspect queued event-driven agent wakes.
+- `POST /scheduler/event-queue/tick`: process queued event-driven agent wakes.
+- `POST /integrations/feishu/attendance/sync`: run Feishu Attendance sync for active attendance bindings.
 - `POST /seed/demo`: seed demo accounts, markets, and agents.
 
 ## Product Rules

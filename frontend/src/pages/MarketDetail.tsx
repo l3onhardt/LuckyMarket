@@ -13,7 +13,7 @@ import {
 } from '@/hooks/useMarkets';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
-import { describeWorldEvent, describeWorldEventActivity } from '@/lib/worldEvents';
+import { describeWorldEvent, describeWorldEventActivity, hasActiveWorldEventBinding } from '@/lib/worldEvents';
 import { formatDate, formatPoints, formatProbability } from '@/lib/utils';
 import { categoryLabel } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -46,6 +46,7 @@ export default function MarketDetail() {
   const pricesByOutcome = useMemo(() => {
     return new Map(market?.prices.map((price) => [price.outcomeId, price.price]) ?? []);
   }, [market]);
+  const hasActiveBinding = hasActiveWorldEventBinding(bindingsQuery.data);
 
   const handleQuote = () => {
     if (!effectiveSelectedOutcomeId) return;
@@ -156,7 +157,7 @@ export default function MarketDetail() {
                     </div>
                   </div>
                 ))
-              ) : bindingsQuery.data?.length ? (
+              ) : hasActiveBinding ? (
                 <div className="text-sm text-slate-400">已绑定公司事件，等待下一次同步。</div>
               ) : (
                 <div className="text-sm text-slate-400">这个市场还没有绑定公司事件。</div>
@@ -176,7 +177,7 @@ export default function MarketDetail() {
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-medium text-slate-200">
                         {item.type === 'agent_trade' && item.payload && typeof item.payload === 'object'
-                          ? describeWorldEventActivity(item.payload as Record<string, unknown>)
+                          ? (describeWorldEventActivity(item.payload as Record<string, unknown>) ?? item.message)
                           : item.message}
                       </span>
                       <span className="text-sm text-slate-500">{formatDate(item.createdAt)}</span>

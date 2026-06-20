@@ -227,4 +227,18 @@ describe('AgentEventQueueService', () => {
 
     db.close();
   });
+
+  test('scheduler event queue tick is separate from normal due-agent tick', () => {
+    const { db, event, queue } = setup();
+    queue.enqueueForEvent(event);
+
+    const first = queue.tick(2);
+    const second = queue.tick(2);
+
+    expect(first.processedQueueItems).toHaveLength(2);
+    expect(second.processedQueueItems).toHaveLength(0);
+    expect(second.remainingQueuedItems).toBe(0);
+
+    db.close();
+  });
 });

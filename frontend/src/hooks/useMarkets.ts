@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getMarket,
   getMarketActivity,
+  getMarketBindings,
   getMarketPriceHistory,
+  getMarketWorldEvents,
   listMarkets,
   placeTrade,
   quoteTrade,
@@ -41,6 +43,24 @@ export function useMarketPriceHistory(id: string | undefined) {
     queryFn: () => getMarketPriceHistory(id as string),
     enabled: Boolean(id),
     refetchInterval: 10000,
+  });
+}
+
+export function useMarketWorldEvents(id: string | undefined) {
+  return useQuery({
+    queryKey: ['market', id, 'world-events'],
+    queryFn: () => getMarketWorldEvents(id as string),
+    enabled: Boolean(id),
+    refetchInterval: 10000,
+  });
+}
+
+export function useMarketBindings(id: string | undefined) {
+  return useQuery({
+    queryKey: ['market', id, 'bindings'],
+    queryFn: () => getMarketBindings(id as string),
+    enabled: Boolean(id),
+    refetchInterval: 30000,
   });
 }
 

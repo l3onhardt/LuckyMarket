@@ -5,12 +5,14 @@ import type {
   Agent,
   LedgerEntry,
   Market,
+  MarketEventBinding,
   Position,
   PriceSnapshot,
   SchedulerTickResult,
   TradeQuote,
   TradeRecord,
   WakeAgentResult,
+  WorldEvent,
 } from '@/types';
 
 // ==================== Account APIs ====================
@@ -86,6 +88,16 @@ export async function getMarketActivity(marketId: string): Promise<Activity[]> {
 export async function getMarketPriceHistory(marketId: string): Promise<PriceSnapshot[]> {
   const response = await apiClient.get<{ history: PriceSnapshot[] }>(`/markets/${marketId}/price-history`);
   return response.data.history;
+}
+
+export async function getMarketWorldEvents(marketId: string): Promise<WorldEvent[]> {
+  const response = await apiClient.get<{ events: WorldEvent[] }>(`/markets/${marketId}/world-events`);
+  return response.data.events;
+}
+
+export async function getMarketBindings(marketId: string): Promise<MarketEventBinding[]> {
+  const response = await apiClient.get<{ bindings: MarketEventBinding[] }>(`/markets/${marketId}/bindings`);
+  return response.data.bindings;
 }
 
 // ==================== Trade APIs ====================

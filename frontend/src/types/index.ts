@@ -137,3 +137,39 @@ export interface PriceSnapshot {
   price: number;
   createdAt: string;
 }
+
+export type WorldEventConfidence = 'low' | 'medium' | 'high';
+
+export interface WorldEvent {
+  id: string;
+  type: string;
+  source: string;
+  sourceRef: string | null;
+  subjectType: string;
+  subjectId: string;
+  subjectLabel: string;
+  period: string | null;
+  effectiveAt: string;
+  observedAt: string;
+  confidence: WorldEventConfidence;
+  summary: string;
+  payload: Record<string, unknown>;
+  dedupeKey: string;
+  createdAt: string;
+}
+
+export interface MarketEventBinding {
+  id: string;
+  marketId: string;
+  eventType: string;
+  subjectType: string;
+  subjectId: string;
+  subjectLabel: string;
+  period: string | null;
+  metricKeys: string[];
+  status: 'suggested' | 'active' | 'disabled';
+  suggestedBy: string;
+  confirmedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

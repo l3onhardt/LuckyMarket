@@ -1,10 +1,19 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Loader2, Send, TrendingUp } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, DatabaseZap, Loader2, Send, TrendingUp } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMarket, useMarketActivity, useMarketPriceHistory, usePlaceTrade, useQuote } from '@/hooks/useMarkets';
+import {
+  useMarket,
+  useMarketActivity,
+  useMarketBindings,
+  useMarketPriceHistory,
+  useMarketWorldEvents,
+  usePlaceTrade,
+  useQuote,
+} from '@/hooks/useMarkets';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/store/authStore';
+import { describeWorldEvent, describeWorldEventActivity } from '@/lib/worldEvents';
 import { formatDate, formatPoints, formatProbability } from '@/lib/utils';
 import { categoryLabel } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -19,6 +28,8 @@ export default function MarketDetail() {
   const marketQuery = useMarket(id);
   const activityQuery = useMarketActivity(id);
   const historyQuery = useMarketPriceHistory(id);
+  const worldEventsQuery = useMarketWorldEvents(id);
+  const bindingsQuery = useMarketBindings(id);
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<string>('');
   const [shares, setShares] = useState(2);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -132,6 +143,29 @@ export default function MarketDetail() {
 
           <div className="fluid-glass-card p-6">
             <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-white">
+              <DatabaseZap size={20} />
+              公司事件影响
+            </h2>
+            <div className="space-y-3">
+              {worldEventsQuery.data?.length ? (
+                worldEventsQuery.data.slice(0, 4).map((event) => (
+                  <div key={event.id} className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3">
+                    <div className="text-sm font-medium text-emerald-100">{describeWorldEvent(event)}</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      {event.source === 'feishu_attendance' ? '飞书考勤' : '人工事件'} · {event.confidence}
+                    </div>
+                  </div>
+                ))
+              ) : bindingsQuery.data?.length ? (
+                <div className="text-sm text-slate-400">已绑定公司事件，等待下一次同步。</div>
+              ) : (
+                <div className="text-sm text-slate-400">这个市场还没有绑定公司事件。</div>
+              )}
+            </div>
+          </div>
+
+          <div className="fluid-glass-card p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-white">
               <TrendingUp size={20} />
               最近活动
             </h2>
@@ -140,7 +174,11 @@ export default function MarketDetail() {
                 activityQuery.data.map((item) => (
                   <div key={item.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium text-slate-200">{item.message}</span>
+                      <span className="text-sm font-medium text-slate-200">
+                        {item.type === 'agent_trade' && item.payload && typeof item.payload === 'object'
+                          ? describeWorldEventActivity(item.payload as Record<string, unknown>)
+                          : item.message}
+                      </span>
                       <span className="text-sm text-slate-500">{formatDate(item.createdAt)}</span>
                     </div>
                     <div className="mt-1 text-sm uppercase tracking-wide text-slate-500">{item.type}</div>

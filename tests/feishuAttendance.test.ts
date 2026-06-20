@@ -155,4 +155,38 @@ describe('FeishuAttendanceAdapter', () => {
 
     db.close();
   });
+
+  test('rolls back world events if success audit persistence fails', async () => {
+    const client: FeishuAttendanceClient = {
+      async getMonthlySummary(subject) {
+        return {
+          sourceRef: `feishu-stat-${subject.subjectId}-2026-06`,
+          restDaysSoFar: 6,
+          workDaysSoFar: 8,
+          effectiveAt: '2026-06-18T12:00:00.000Z',
+          observedAt: '2026-06-18T12:05:00.000Z'
+        };
+      }
+    };
+    const { db, adapter, worldEvents } = setup(client);
+    db.exec(`
+      CREATE TRIGGER fail_success_sync_audit
+      BEFORE INSERT ON integration_sync_runs
+      WHEN NEW.status = 'success'
+      BEGIN
+        SELECT RAISE(ABORT, 'success audit blocked');
+      END;
+    `);
+
+    const result = await adapter.syncMonthlySummaries('2026-06-18T12:10:00.000Z');
+
+    expect(result).toMatchObject({ status: 'failed', createdEvents: 0, queuedItems: 0 });
+    expect(result.errorMessage).toContain('success audit blocked');
+    expect(worldEvents.listEvents()).toEqual([]);
+    expect(db.prepare("SELECT status FROM integration_sync_runs WHERE provider = 'feishu_attendance'").get()).toEqual({
+      status: 'failed'
+    });
+
+    db.close();
+  });
 });

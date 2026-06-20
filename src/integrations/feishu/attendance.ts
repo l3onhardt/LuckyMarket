@@ -103,10 +103,10 @@ export class FeishuAttendanceAdapter {
             queuedItems += this.queue.enqueueForEvent(event).length;
           }
         }
+        this.recordSync(startedAt, { status: 'success', scannedSubjects, createdEvents, queuedItems });
       });
 
       const result = { status: 'success' as const, scannedSubjects, createdEvents, queuedItems };
-      this.recordSync(startedAt, result);
       return result;
     } catch (error) {
       const result = {

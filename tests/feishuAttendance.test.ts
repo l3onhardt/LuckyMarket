@@ -129,4 +129,30 @@ describe('FeishuAttendanceAdapter', () => {
 
     db.close();
   });
+
+  test('rolls back world events if persistence fails after summaries are fetched', async () => {
+    const client: FeishuAttendanceClient = {
+      async getMonthlySummary(subject) {
+        return {
+          sourceRef: `feishu-stat-${subject.subjectId}-2026-06`,
+          restDaysSoFar: subject.subjectId === 'wang-ge' ? 6 : 1,
+          workDaysSoFar: 8,
+          effectiveAt: '2026-06-18T12:00:00.000Z',
+          observedAt: subject.subjectId === 'wang-ge' ? '2026-06-18T12:05:00.000Z' : 'not-an-iso-timestamp'
+        };
+      }
+    };
+    const { db, adapter, worldEvents } = setup(client);
+    createActiveAttendanceBinding(db, 'xiao-li', '小李');
+
+    const result = await adapter.syncMonthlySummaries('2026-06-18T12:10:00.000Z');
+
+    expect(result).toMatchObject({ status: 'failed', scannedSubjects: 2, createdEvents: 0, queuedItems: 0 });
+    expect(worldEvents.listEvents()).toEqual([]);
+    expect(db.prepare("SELECT status FROM integration_sync_runs WHERE provider = 'feishu_attendance'").get()).toEqual({
+      status: 'failed'
+    });
+
+    db.close();
+  });
 });

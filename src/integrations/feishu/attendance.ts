@@ -71,37 +71,39 @@ export class FeishuAttendanceAdapter {
         fetchedSummaries.push({ subject, summary });
       }
 
-      for (const { subject, summary } of fetchedSummaries) {
-        const event = this.worldEvents.createEvent({
-          type: 'attendance.monthly_summary_updated',
-          source: 'feishu_attendance',
-          sourceRef: summary.sourceRef,
-          subjectType: 'person',
-          subjectId: subject.subjectId,
-          subjectLabel: subject.subjectLabel,
-          period: subject.period,
-          effectiveAt: summary.effectiveAt,
-          observedAt: summary.observedAt,
-          confidence: 'high',
-          summary: `${subject.subjectLabel} ${subject.period} 已休息 ${summary.restDaysSoFar} 天。`,
-          payload: {
-            restDaysSoFar: summary.restDaysSoFar,
-            workDaysSoFar: summary.workDaysSoFar,
-            month: subject.period
-          },
-          dedupeKey: `feishu:attendance:${subject.subjectId}:${subject.period}:restDaysSoFar:${summary.restDaysSoFar}:workDaysSoFar:${summary.workDaysSoFar}`
-        });
-        const allEvents = this.worldEvents.listEvents({
-          subjectId: subject.subjectId,
-          period: subject.period,
-          limit: 1
-        });
+      inTransaction(this.db, () => {
+        for (const { subject, summary } of fetchedSummaries) {
+          const event = this.worldEvents.createEvent({
+            type: 'attendance.monthly_summary_updated',
+            source: 'feishu_attendance',
+            sourceRef: summary.sourceRef,
+            subjectType: 'person',
+            subjectId: subject.subjectId,
+            subjectLabel: subject.subjectLabel,
+            period: subject.period,
+            effectiveAt: summary.effectiveAt,
+            observedAt: summary.observedAt,
+            confidence: 'high',
+            summary: `${subject.subjectLabel} ${subject.period} 已休息 ${summary.restDaysSoFar} 天。`,
+            payload: {
+              restDaysSoFar: summary.restDaysSoFar,
+              workDaysSoFar: summary.workDaysSoFar,
+              month: subject.period
+            },
+            dedupeKey: `feishu:attendance:${subject.subjectId}:${subject.period}:restDaysSoFar:${summary.restDaysSoFar}:workDaysSoFar:${summary.workDaysSoFar}`
+          });
+          const allEvents = this.worldEvents.listEvents({
+            subjectId: subject.subjectId,
+            period: subject.period,
+            limit: 1
+          });
 
-        if (allEvents[0]?.id === event.id && event.createdAt >= startedAt) {
-          createdEvents += 1;
-          queuedItems += this.queue.enqueueForEvent(event).length;
+          if (allEvents[0]?.id === event.id && event.createdAt >= startedAt) {
+            createdEvents += 1;
+            queuedItems += this.queue.enqueueForEvent(event).length;
+          }
         }
-      }
+      });
 
       const result = { status: 'success' as const, scannedSubjects, createdEvents, queuedItems };
       this.recordSync(startedAt, result);
